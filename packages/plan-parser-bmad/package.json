@@ -1,0 +1,21 @@
+{
+  "name": "@greenproof/plan-parser-bmad",
+  "version": "0.1.67",
+  "private": true,
+  "type": "module",
+  "description": "Optional plan-source plugin: parses BMAD TEA test-design.md into the greenproof normalized plan JSON. The core never depends on BMAD.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@greenproof/core": "workspace:*"
+  },
+  "engines": { "node": ">=20" }
+}

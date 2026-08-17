@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DemoPay — Pracownicy</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>DemoPay</h1>
+      <nav class="nav">
+        <a href="/employees" class="active">Pracownicy</a>
+        <a href="/payroll">Lista płac</a>
+        <a href="#" id="logout-link">Wyloguj</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="card">
+        <h2>Dodaj pracownika</h2>
+        <div id="employee-form-error" class="error" data-testid="employee-form-error"></div>
+        <form id="employee-form">
+          <div class="form-row">
+            <div>
+              <label for="employee-name">Imię i nazwisko</label>
+              <input type="text" id="employee-name" data-testid="employee-name" />
+            </div>
+            <div>
+              <label for="employee-pesel">PESEL</label>
+              <input type="text" id="employee-pesel" data-testid="employee-pesel" maxlength="11" />
+            </div>
+            <div>
+              <label for="employee-salary">Stawka brutto (zł)</label>
+              <input type="number" id="employee-salary" data-testid="employee-salary" step="0.01" min="0" />
+            </div>
+            <button type="submit" data-testid="employee-submit">Dodaj</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Lista pracowników</h2>
+        <table data-testid="employees-table">
+          <thead>
+            <tr>
+              <th>Imię i nazwisko</th>
+              <th>PESEL</th>
+              <th>Stawka brutto</th>
+            </tr>
+          </thead>
+          <tbody id="employees-body"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <script src="/employees.js"></script>
+  </body>
+</html>

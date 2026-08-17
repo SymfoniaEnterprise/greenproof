@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR-Payroll Benchmark - Listy płac</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>HR-Payroll Benchmark</h1>
+        <nav class="nav">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/employees.html">Pracownicy</a>
+            <a href="/payroll.html" class="active nav-admin-accountant">Listy płac</a>
+            <a href="/leave.html">Urlopy</a>
+            <a href="/departments.html" class="nav-admin">Działy</a>
+            <a href="#" id="logout-link" class="logout-link">Wyloguj</a>
+        </nav>
+    </header>
+    <main class="container">
+        <div class="card">
+            <h2>Listy płac</h2>
+            <div class="error" data-testid="payroll-error"></div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="payroll-month">Miesiąc</label>
+                    <input type="month" id="payroll-month" data-testid="payroll-month">
+                </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                    <button id="payroll-load" class="btn btn-secondary">Wczytaj</button>
+                </div>
+                <div class="form-group" style="display: flex; align-items: flex-end;">
+                    <button id="payroll-create" class="btn btn-primary nav-admin-accountant" data-testid="payroll-create" disabled>Utwórz listę płac</button>
+                </div>
+            </div>
+            
+            <div class="status-message" data-testid="payroll-status"></div>
+            
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Pracownik</th>
+                            <th>Brutto</th>
+                            <th>Netto</th>
+                            <th>Status</th>
+                            <th>Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payroll-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+    <script src="/payroll.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DemoPay — Lista płac</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>DemoPay</h1>
+      <nav class="nav">
+        <a href="/employees">Pracownicy</a>
+        <a href="/payroll" class="active">Lista płac</a>
+        <a href="#" id="logout-link">Wyloguj</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="card">
+        <h2>Utwórz listę płac</h2>
+        <div class="form-row">
+          <div>
+            <label for="payroll-month">Miesiąc (YYYY-MM)</label>
+            <input type="month" id="payroll-month" data-testid="payroll-month" />
+          </div>
+          <button type="button" id="payroll-create" data-testid="payroll-create">
+            Utwórz listę płac
+          </button>
+        </div>
+        <div id="payroll-status" class="status" data-testid="payroll-status"></div>
+        <div id="payroll-error" class="error" data-testid="payroll-error"></div>
+      </div>
+
+      <div class="card">
+        <h2>Lista płac</h2>
+        <table data-testid="payroll-table">
+          <thead>
+            <tr>
+              <th>Pracownik</th>
+              <th>Brutto</th>
+              <th>Netto</th>
+            </tr>
+          </thead>
+          <tbody id="payroll-body"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <script src="/payroll.js"></script>
+  </body>
+</html>

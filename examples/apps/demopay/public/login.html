@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DemoPay — Logowanie</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="card login-box">
+      <h1>DemoPay</h1>
+      <h2>Logowanie</h2>
+      <div id="login-error" class="error" data-testid="login-error"></div>
+      <form id="login-form">
+        <label for="login-username">Nazwa użytkownika</label>
+        <input
+          type="text"
+          id="login-username"
+          data-testid="login-username"
+          autocomplete="username"
+        />
+        <label for="login-password">Hasło</label>
+        <input
+          type="password"
+          id="login-password"
+          data-testid="login-password"
+          autocomplete="current-password"
+        />
+        <button type="submit" data-testid="login-submit">Zaloguj się</button>
+      </form>
+      <p class="hint">Konto testowe: demo / demo123</p>
+    </div>
+    <script src="/login.js"></script>
+  </body>
+</html>

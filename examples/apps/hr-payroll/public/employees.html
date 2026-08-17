@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR-Payroll Benchmark - Pracownicy</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>HR-Payroll Benchmark</h1>
+        <nav class="nav">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/employees.html" class="active">Pracownicy</a>
+            <a href="/payroll.html" data-testid="nav-payroll" class="nav-admin-accountant">Listy płac</a>
+            <a href="/leave.html" data-testid="nav-leave">Urlopy</a>
+            <a href="/departments.html" data-testid="nav-departments" class="nav-admin">Działy</a>
+            <a href="#" id="logout-link" class="logout-link">Wyloguj</a>
+        </nav>
+    </header>
+    <main class="container">
+        <div class="card">
+            <h2>Pracownicy</h2>
+            <div class="error" data-testid="employees-page-error"></div>
+            
+            <div class="filters">
+                <div class="form-group">
+                    <input type="text" id="employee-search" data-testid="employee-search" placeholder="Szukaj...">
+                </div>
+                <div class="form-group">
+                    <select id="employee-filter-department" data-testid="employee-filter-department">
+                        <option value="">Wszystkie działy</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <select id="employee-filter-active" data-testid="employee-filter-active">
+                        <option value="">Wszyscy</option>
+                        <option value="true">Aktywni</option>
+                        <option value="false">Nieaktywni</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <select id="employee-sort" data-testid="employee-sort">
+                        <option value="name">Sortuj: Imię</option>
+                        <option value="pesel">Sortuj: PESEL</option>
+                        <option value="salary">Sortuj: Pensja</option>
+                        <option value="department_id">Sortuj: Dział</option>
+                        <option value="hired_at">Sortuj: Data zatrudnienia</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <select id="employee-sort-dir" data-testid="employee-sort-dir">
+                        <option value="ASC">Rosnąco</option>
+                        <option value="DESC">Malejąco</option>
+                    </select>
+                </div>
+                <button id="employee-refresh" data-testid="employee-refresh" class="btn btn-secondary">Odśwież</button>
+            </div>
+
+            <div id="add-employee-form-container" class="nav-admin" style="display: none;">
+                <h3>Dodaj pracownika</h3>
+                <form id="add-employee-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="employee-name">Imię i nazwisko</label>
+                            <input type="text" id="employee-name" data-testid="employee-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="employee-pesel">PESEL</label>
+                            <input type="text" id="employee-pesel" data-testid="employee-pesel" required pattern="[0-9]{11}">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="employee-salary">Pensja (brutto)</label>
+                            <input type="number" id="employee-salary" data-testid="employee-salary" required min="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="employee-department">Dział</label>
+                            <select id="employee-department" data-testid="employee-department" required>
+                                <option value="">Wybierz dział</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="employee-position">Stanowisko</label>
+                            <input type="text" id="employee-position" data-testid="employee-position" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="employee-hired-at">Data zatrudnienia</label>
+                            <input type="date" id="employee-hired-at" data-testid="employee-hired-at" required>
+                        </div>
+                    </div>
+                    <div class="error" data-testid="employee-form-error"></div>
+                    <button type="submit" class="btn btn-primary" data-testid="employee-submit">Dodaj pracownika</button>
+                </form>
+            </div>
+
+            <div class="table-wrapper">
+                <table data-testid="employees-table">
+                    <thead>
+                        <tr>
+                            <th>Imię</th>
+                            <th>PESEL</th>
+                            <th>Dział</th>
+                            <th>Stanowisko</th>
+                            <th>Pensja</th>
+                            <th>Data zatrudnienia</th>
+                            <th>Status</th>
+                            <th>Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employees-tbody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination">
+                <button id="employee-prev-page" data-testid="employee-prev-page" disabled>Poprzednia</button>
+                <span id="employee-page-info" data-testid="employee-page-info">Strona 1 z 1</span>
+                <button id="employee-next-page" data-testid="employee-next-page" disabled>Następna</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Modal -->
+    <div id="employee-edit-modal" class="modal" data-testid="employee-edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edytuj pracownika</h3>
+                <button class="modal-close" id="employee-edit-close">&times;</button>
+            </div>
+            <form id="edit-employee-form">
+                <input type="hidden" id="edit-employee-id">
+                <input type="hidden" id="edit-employee-version">
+                <div class="form-group">
+                    <label for="edit-employee-name">Imię i nazwisko</label>
+                    <input type="text" id="edit-employee-name" data-testid="employee-edit-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-pesel">PESEL</label>
+                    <input type="text" id="edit-employee-pesel" data-testid="employee-edit-pesel" required pattern="[0-9]{11}">
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-salary">Pensja (brutto)</label>
+                    <input type="number" id="edit-employee-salary" data-testid="employee-edit-salary" required min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-department">Dział</label>
+                    <select id="edit-employee-department" data-testid="employee-edit-department" required>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-position">Stanowisko</label>
+                    <input type="text" id="edit-employee-position" data-testid="employee-edit-position" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-employee-hired-at">Data zatrudnienia</label>
+                    <input type="date" id="edit-employee-hired-at" data-testid="employee-edit-hired-at" required>
+                </div>
+                <div class="error" data-testid="employee-edit-error"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="employee-edit-cancel" data-testid="employee-edit-cancel">Anuluj</button>
+                    <button type="submit" class="btn btn-primary" data-testid="employee-edit-save">Zapisz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <div id="employee-confirm-dialog" class="confirm-dialog" data-testid="employee-confirm-dialog">
+        <div class="confirm-content">
+            <p id="employee-confirm-message"></p>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" id="employee-confirm-cancel" data-testid="employee-confirm-cancel">Anuluj</button>
+                <button class="btn btn-danger" id="employee-confirm-ok" data-testid="employee-confirm-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/employees.js"></script>
+</body>
+</html>

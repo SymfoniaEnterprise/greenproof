@@ -1,0 +1,185 @@
+# Weryfikacja, że biblioteka działa NATYWNIE na Windowsie (cmd/PowerShell, bez
+# WSL). Nie mamy maszyny z Windowsem, więc ten workflow jest jedynym miejscem,
+# w którym kod z commitów "feat(windows)"/"fix(windows)" naprawdę się wykonuje.
+#
+# Dwa joby, bo mają różny charakter:
+#   - build-test  - instalacja/build/testy, MACIERZ ubuntu+windows. Linux jest
+#                   tu próbą kontrolną: czerwone na obu = zwykła regresja,
+#                   czerwone tylko na windows-latest = problem przenośności.
+#   - windows-smoke - kroki, które na Linuksie nie mają sensu (cmd.exe,
+#                   pwsh, %LOCALAPPDATA%), więc NIE są warunkami w macierzy.
+#
+# Zero sekretów i zero ruchu do modeli: `run --init-only` robi sam scaffold i
+# generuje config, a `step filter` jest czystą selekcją. Jedyna sieć to rejestr
+# npm (paczka @playwright/test) - bez `playwright install`, więc bez przeglądarek.
+name: windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: build + testy (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false # bez tego czerwony Linux ukrywa wynik Windowsa
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      # Świadomie BEZ core.autocrlf=false: użytkownik na Windowsie klonuje repo
+      # domyślnym gitem i dostaje CRLF. Jeśli to coś wywraca, chcemy to widzieć.
+      - uses: actions/checkout@v4
+      # Bez `version:` - action czyta packageManager (pnpm@11.6.0) z package.json.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # engines: >=20; referencyjne workflow używają 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test
+
+  windows-smoke:
+    name: realne wywołania przez cmd.exe (windows)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh # domyślna powłoka runnera Windows; deklarujemy ją wprost
+    env:
+      # Katalog repo testów ze SPACJĄ i NAWIASAMI - najbardziej prawdopodobne
+      # miejsce awarii escapowania i cytowania ścieżek (wzorzec "Program Files (x86)").
+      GP_TESTS_REPO: ${{ github.workspace }}\..\gp testy (x86) ze spacja
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      # Jedyny krok pod cmd.exe zamiast pwsh: deklarujemy wsparcie dla obu
+      # powłok, a to jest ta, w której najłatwiej o pomyłkę cytowania.
+      - name: round-trip argv przez spawnArgv (shell cmd)
+        shell: cmd
+        env:
+          GP_EXEC_MODULE: ${{ github.workspace }}\packages\core\dist\util\exec.js
+        run: |
+          node .github\scripts\spawn-argv-check.mjs
+          if %errorlevel% neq 0 exit /b %errorlevel%
+
+      # Spawn serwera MCP robi Claude Agent SDK i opcji tego spawnu NIE ustawiamy,
+      # więc `windowsVerbatimArguments` jest nieosiągalny, a cytowanie Node'a nie
+      # escapuje metaznaków cmd.exe. Dlatego mcpServerCommand cmd.exe omija
+      # (node.exe + npx-cli.js) - krok sprawdza i kształt komendy, i to, czy
+      # `--output-dir` ze spacją, nawiasem i `&` dochodzi w całości.
+      - name: kształt spawnu serwera MCP (mcpServerCommand)
+        env:
+          GP_EXEC_MODULE: ${{ github.workspace }}\packages\core\dist\util\exec.js
+        run: node .github\scripts\spawn-argv-check.mjs --mcp
+
+      # Wrapper `gp` - jedyna droga, jaką dokumentacja i skille każą wołać CLI.
+      # Na Windowsie to plik .cmd, więc sprawdzamy dwie rzeczy naraz: że
+      # setup-cli w ogóle go zakłada i zweryfikuje (jego własne wywołanie
+      # wrappera padłoby na EINVAL bez obejścia przez cmd.exe), oraz że kod
+      # wyjścia wraca do wołającego - kody 3/5/10 sterują przepływem CI, więc
+      # zjedzony ERRORLEVEL jest cichą awarią bramkowania.
+      #
+      # NIE wołamy tu gołego `gp`: w PowerShellu to WBUDOWANY ALIAS
+      # Get-ItemProperty, a aliasy mają pierwszeństwo przed komendami z PATH.
+      # To nie jest problem samego CI - dotyczy każdego użytkownika PowerShella,
+      # więc jest opisany w README (Instalacja) i docs/runner-requirements.md.
+      - name: wrapper gp.cmd zakłada się i przenosi kod wyjścia
+        env:
+          XDG_BIN_HOME: ${{ github.workspace }}\gp bin ze spacja
+        run: |
+          pnpm setup-cli
+          $env:PATH = "$env:XDG_BIN_HOME;$env:PATH"
+          # Dwa warianty, ktore w PowerShellu naprawde trafiaja we wrapper:
+          # pelna nazwa `greenproof` (nie koliduje z zadnym aliasem) i `gp.cmd`
+          # z jawnym rozszerzeniem (rozszerzenie omija tablice aliasow).
+          $wersja = & gp.cmd --version
+          if ($LASTEXITCODE -ne 0) { throw "gp.cmd --version zakonczylo sie kodem $LASTEXITCODE" }
+          if (-not $wersja) { throw 'gp.cmd --version nie wypisalo wersji' }
+          $wersja2 = & greenproof --version
+          if ($LASTEXITCODE -ne 0) { throw "greenproof --version zakonczylo sie kodem $LASTEXITCODE" }
+          if ($wersja2 -ne $wersja) { throw "gp.cmd i greenproof zwracaja rozne wersje: $wersja vs $wersja2" }
+          Write-Host "gp.cmd --version -> $wersja"
+          # Nieznana komenda = walidacja wejscia = kod 2. Sprawdzamy, ze wrapper
+          # przenosi NIEZEROWY kod, a nie tylko happy path.
+          & gp.cmd nie-ma-takiej-komendy 2>$null
+          if ($LASTEXITCODE -ne 2) { throw "oczekiwano kodu 2, dostano $LASTEXITCODE" }
+          # OBOWIAZKOWE: Actions doklejaja do kazdego kroku pwsh linijke
+          # `if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit $LASTEXITCODE }`,
+          # a $LASTEXITCODE zostal tu celowo na 2 (sprawdzalismy niezerowy kod).
+          # Bez tego krok konczy sie czerwono mimo zaliczonych asercji.
+          exit 0
+
+      # `%` było słabym punktem: daszek PRZED procentem nie blokuje rozwinięcia
+      # zmiennej (rozwijanie idzie fazę wcześniej niż zdejmowanie daszków).
+      # escapeCmdMeta wstawia daszek ZARAZ ZA procentem - psuje nazwę zmiennej,
+      # a w linii poleceń nierozwinięty tekst zostaje. Sonda przestała być
+      # pomiarem i jest BRAMKĄ: wzorzec `--grep` podaje model, więc rozwinięte
+      # `%PATH%` uruchomiłoby nie ten zestaw testów, co trzeba.
+      - name: znaki procenta w argumencie (bramka)
+        env:
+          GP_EXEC_MODULE: ${{ github.workspace }}\packages\core\dist\util\exec.js
+        run: node .github\scripts\spawn-argv-check.mjs --percent
+
+      # Najcenniejszy krok: `run --init-only` robi git init + `npm install`
+      # PRZEZ spawnArgv, czyli przez prawdziwe cmd.exe. GREENPROOF_SKIP_INSTALL
+      # tu NIE padnie - pomija dokładnie to jedno wywołanie, które chcemy zbadać.
+      # --fixture-author none, żeby nie pytać bramy modeli o listę modeli.
+      - name: gp run --init-only w katalogu ze spacją
+        run: |
+          node packages\cli\dist\main.js run --tests-repo "$env:GP_TESTS_REPO" --init-only --fixture-author none
+          if ($LASTEXITCODE -ne 0) { throw "run --init-only zwrocil $LASTEXITCODE" }
+          foreach ($p in '.git', 'package.json', 'playwright.config.ts', 'greenproof.config.mjs', 'node_modules\@playwright\test') {
+            $full = Join-Path $env:GP_TESTS_REPO $p
+            if (-not (Test-Path -LiteralPath $full)) { throw "brak $p w repo testow" }
+          }
+          # node_modules/@playwright/test istnieje = `npm install` przez cmd.exe
+          # naprawde poszedl (a nie padl cicho na EINVAL z CVE-2024-27980).
+
+      # Wygenerowany config to .mjs ładowany dynamicznym importem - na Windowsie
+      # absolutna ścieżka wymaga pathToFileURL, a ta ma spację i nawiasy.
+      # `step filter` jest czystą selekcją: bez modelu, bez tokenów, bez sieci.
+      - name: step filter na wygenerowanym configu (exit 10 = pusty roster)
+        run: |
+          $repo = $env:GP_TESTS_REPO
+          '{"slug":"windows-smoke","cases":[]}' | Set-Content -LiteralPath (Join-Path $repo 'plan.json') -Encoding utf8
+          '{"slug":"windows-smoke","envUrl":"http://127.0.0.1:1/","ref":"main","runRef":"ci","plan":{"path":"plan.json"}}' |
+            Set-Content -LiteralPath (Join-Path $repo 'filter-in.json') -Encoding utf8
+          node packages\cli\dist\main.js step filter `
+            --config (Join-Path $repo 'greenproof.config.mjs') `
+            --in (Join-Path $repo 'filter-in.json') `
+            --out (Join-Path $repo 'filter-out.json')
+          # 10 = pusty roster i jedyny poprawny wynik dla planu bez case'ow.
+          if ($LASTEXITCODE -ne 10) { throw "step filter zwrocil $LASTEXITCODE, oczekiwano 10" }
+          if (-not (Test-Path -LiteralPath (Join-Path $repo 'filter-out.json'))) { throw "brak filter-out.json" }
+          exit 0
+
+      # Dane aplikacji mają iść do %LOCALAPPDATA%, nie do ~/.local/share.
+      # Pliki tam leżą, więc przy okazji przechodzą przez wartowników kluczy
+      # artefaktów w adapter-fs (assertSafeKey) - na ścieżkach z literą dysku.
+      - name: dane runu wylądowały w %LOCALAPPDATA%
+        run: |
+          $base = Join-Path $env:LOCALAPPDATA 'greenproof\manual-codex-sub\platform'
+          foreach ($d in 'state', 'artifacts', 'reports') {
+            $full = Join-Path $base $d
+            if (-not (Test-Path -LiteralPath $full)) { throw "brak $full - dane nie trafily do %LOCALAPPDATA%" }
+          }
+          Get-ChildItem -LiteralPath $base -Recurse -File | Select-Object -ExpandProperty FullName

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR-Payroll Benchmark - Działy</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>HR-Payroll Benchmark</h1>
+        <nav class="nav">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/employees.html">Pracownicy</a>
+            <a href="/payroll.html" class="nav-admin-accountant">Listy płac</a>
+            <a href="/leave.html">Urlopy</a>
+            <a href="/departments.html" class="active nav-admin">Działy</a>
+            <a href="#" id="logout-link" class="logout-link">Wyloguj</a>
+        </nav>
+    </header>
+    <main class="container">
+        <div class="card">
+            <h2>Działy</h2>
+            <div class="error" data-testid="departments-page-error"></div>
+            
+            <div class="card" style="background-color: #f8f9fa; margin-bottom: 20px;">
+                <h3>Dodaj dział</h3>
+                <form id="department-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="department-name">Nazwa działu</label>
+                            <input type="text" id="department-name" data-testid="department-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="department-cost-center">Centrum kosztów</label>
+                            <input type="text" id="department-cost-center" data-testid="department-cost-center">
+                        </div>
+                    </div>
+                    <div class="error" data-testid="department-form-error"></div>
+                    <button type="submit" class="btn btn-primary" data-testid="department-submit">Dodaj dział</button>
+                </form>
+            </div>
+
+            <h3>Lista działów</h3>
+            <div class="table-wrapper">
+                <table data-testid="departments-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nazwa</th>
+                            <th>Centrum kosztów</th>
+                        </tr>
+                    </thead>
+                    <tbody id="departments-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+    <script src="/departments.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR-Payroll Benchmark - Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>HR-Payroll Benchmark</h1>
+        <nav class="nav">
+            <a href="/dashboard" class="active">Dashboard</a>
+            <a href="/employees.html" data-testid="nav-employees">Pracownicy</a>
+            <a href="/payroll.html" data-testid="nav-payroll" class="nav-admin-accountant">Listy płac</a>
+            <a href="/leave.html" data-testid="nav-leave">Urlopy</a>
+            <a href="/departments.html" data-testid="nav-departments" class="nav-admin">Działy</a>
+            <a href="#" id="logout-link" class="logout-link">Wyloguj</a>
+        </nav>
+    </header>
+    <main class="container">
+        <div class="card">
+            <h2 data-testid="dashboard-greeting">Witaj!</h2>
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <h3>Pracownicy</h3>
+                    <div class="value" data-testid="dashboard-employees-count">-</div>
+                    <div class="subtitle">zatrudnionych</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Urlopy w toku</h3>
+                    <div class="value" data-testid="dashboard-leave-pending">-</div>
+                    <div class="subtitle">oczekujących</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Lista płac</h3>
+                    <div class="value" data-testid="dashboard-payroll-status">-</div>
+                    <div class="subtitle" id="dashboard-payroll-month"></div>
+                </div>
+            </div>
+            <div class="quick-links">
+                <a href="/employees.html">Zarządzaj pracownikami</a>
+                <a href="/payroll.html" class="nav-admin-accountant">Listy płac</a>
+                <a href="/leave.html">Urlopy</a>
+                <a href="/departments.html" class="nav-admin">Działy</a>
+            </div>
+        </div>
+    </main>
+    <script src="/dashboard.js"></script>
+</body>
+</html>

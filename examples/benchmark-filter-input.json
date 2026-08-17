@@ -1,0 +1,165 @@
+{
+  "slug": "hr-payroll-benchmark-v1",
+  "envUrl": "http://localhost:3132",
+  "ref": "main",
+  "runRef": "gp-bench-run-1",
+  "plan": {
+    "slug": "hr-payroll-benchmark-v1",
+    "source": {
+      "format": "json",
+      "path": "examples/benchmark-plan.json"
+    },
+    "cases": [
+      {
+        "caseId": "login-success",
+        "title": "Logowanie admina i wylogowanie",
+        "level": "e2e",
+        "priority": "P0",
+        "requirements": [
+          "Po zalogowaniu admin/admin123 trafia na /dashboard z powitaniem",
+          "Po wylogowaniu wraca na /login i sesja jest nieaktywna"
+        ],
+        "flows": [
+          "login",
+          "logout"
+        ]
+      },
+      {
+        "caseId": "login-failure",
+        "title": "Logowanie z błędnymi danymi pokazuje komunikat",
+        "level": "e2e",
+        "priority": "P0",
+        "requirements": [
+          "Zły login lub hasło daje widoczny komunikat 'Nieprawidłowy login lub hasło'",
+          "Zablokowane konto (active=0) daje 'Konto zablokowane'"
+        ],
+        "flows": [
+          "login",
+          "validation"
+        ]
+      },
+      {
+        "caseId": "employee-create-validation",
+        "title": "Tworzenie pracownika z walidacją PESEL",
+        "level": "e2e",
+        "priority": "P0",
+        "requirements": [
+          "Pracownik z poprawnym PESEL (cyfra kontrolna) i danymi zostaje dodany i widnieje w tabeli",
+          "PESEL z błędną cyfrą kontrolną daje komunikat 'Nieprawidłowy numer PESEL'",
+          "Duplikat PESEL daje 'PESEL już istnieje'"
+        ],
+        "flows": [
+          "employees",
+          "validation",
+          "pesel"
+        ]
+      },
+      {
+        "caseId": "employee-pagination-sort",
+        "title": "Paginacja i sortowanie listy pracowników",
+        "level": "e2e",
+        "priority": "P1",
+        "requirements": [
+          "Przy 25 pracownikach lista dzieli się na strony po 10 (pageSize domyślny)",
+          "Nawigacja next/prev zmienia stronę i pokazuje poprawny numer strony",
+          "Sortowanie po pensji DESC ustawia najwyższą pensję na górze"
+        ],
+        "flows": [
+          "employees",
+          "pagination",
+          "sort"
+        ]
+      },
+      {
+        "caseId": "employee-optimistic-lock",
+        "title": "Edycja pracownika z konfliktem wersji (optimistic lock)",
+        "level": "e2e",
+        "priority": "P1",
+        "requirements": [
+          "Edycja z nieaktualną wersją pokazuje 'Ktoś zmodyfikował ten rekord'",
+          "Edycja z aktualną wersją zapisuje zmiany"
+        ],
+        "flows": [
+          "employees",
+          "editing",
+          "optimistic-lock"
+        ]
+      },
+      {
+        "caseId": "payroll-create-churn",
+        "title": "Tworzenie listy płac z losowym 503 i ponowieniem",
+        "level": "e2e",
+        "priority": "P0",
+        "requirements": [
+          "Tworzenie listy płac może zwrócić 503 'Lista płac w przygotowaniu' i wymaga ponowienia",
+          "Po ponowieniu lista płac powstaje i widnieje w tabeli dla miesiąca",
+          "Ponowna próba dla tego samego miesiąca daje 409 'Lista płac dla tego miesiąca już istnieje'"
+        ],
+        "flows": [
+          "payroll",
+          "churn",
+          "retry"
+        ]
+      },
+      {
+        "caseId": "payroll-approve-pay",
+        "title": "Workflow listy płac: zatwierdzenie i wypłata",
+        "level": "e2e",
+        "priority": "P1",
+        "requirements": [
+          "Wiersz draft można zatwierdzić (status approved)",
+          "Zatwierdzony wiersz można wypłacić (status paid)",
+          "Podwójne zatwierdzenie daje komunikat o statusie"
+        ],
+        "flows": [
+          "payroll",
+          "workflow"
+        ]
+      },
+      {
+        "caseId": "leave-create-overlap",
+        "title": "Wniosek urlopowy z nakładaniem dat",
+        "level": "e2e",
+        "priority": "P1",
+        "requirements": [
+          "Pracownik tworzy wniosek urlopowy i widzi go na liście jako pending",
+          "Wniosek nakładający się datami daje 'Urlop nakłada się z istniejącym wnioskiem'"
+        ],
+        "flows": [
+          "leave",
+          "validation"
+        ]
+      },
+      {
+        "caseId": "leave-review",
+        "title": "Akceptacja wniosku urlopowego przez księgowego",
+        "level": "e2e",
+        "priority": "P1",
+        "requirements": [
+          "Księgowy akceptuje wniosek pending - status zmienia się na approved",
+          "Wniosek już rozpatrzony nie da się ponownie zrecenzować"
+        ],
+        "flows": [
+          "leave",
+          "review",
+          "roles"
+        ]
+      },
+      {
+        "caseId": "roles-employee-scope",
+        "title": "Pracownik nie widzi uprawnień admina",
+        "level": "e2e",
+        "priority": "P0",
+        "requirements": [
+          "Pracownik nie widzi formularza dodawania pracownika ani przycisków akcji admina",
+          "Pracownik na /departments dostaje 403",
+          "Pracownik widzi tylko swoje wnioski urlopowe"
+        ],
+        "flows": [
+          "roles",
+          "scope"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@greenproof/adapter-github",
+  "version": "0.1.67",
+  "private": true,
+  "type": "module",
+  "description": "GitHub platform adapter: branches/PRs via git data API, issue comments as human channel, pipeline state on an orphan branch with CAS.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@greenproof/core": "workspace:*",
+    "@octokit/rest": "^22.0.0"
+  },
+  "engines": { "node": ">=20" }
+}

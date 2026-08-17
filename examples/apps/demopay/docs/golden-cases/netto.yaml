@@ -1,0 +1,22 @@
+# Golden-case'y oracle — źródło prawdy dla testów netto.
+#
+# Wzór (zgodny z src/net.js):
+#   ZUS      = round2(brutto * 0.1371)
+#   zaliczka = round2((brutto - ZUS - 250) * 0.12)   # ulga podatkowa 250 zł
+#   netto    = round2(brutto - ZUS - zaliczka)
+#
+# round2(x) = Math.round(x * 100) / 100 — zaokrąglanie do grosza
+# na KAŻDYM kroku pośrednim (ZUS i zaliczka zaokrąglane przed dalszymi
+# obliczeniami). Wartości expectedNet muszą zgadzać się z aplikacją
+# co do grosza.
+cases:
+  - gross: 5000
+    expectedNet: 3826.76
+  - gross: 6350.50
+    expectedNet: 4852.27
+  - gross: 10000
+    expectedNet: 7623.52
+  - gross: 4242
+    expectedNet: 3251.17
+  - gross: 12345.67
+    expectedNet: 9404.71

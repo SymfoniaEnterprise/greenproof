@@ -1,0 +1,24 @@
+{
+  "name": "greenproof-monorepo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.6.0",
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --dry",
+    "clean": "tsc -b --clean",
+    "stamp-version": "node scripts/stamp-version.mjs",
+    "setup-cli": "tsc -b && node scripts/setup-cli.mjs",
+    "demo": "tsc -b && node scripts/demo.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0"
+  }
+}

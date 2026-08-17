@@ -1,0 +1,68 @@
+# Referencyjny workflow: /e2e-start na issue przebiegu.
+# Filtr liczy dynamiczny timeout partii → autor dostaje go jako timeout-minutes
+# (dlatego filter i author to OSOBNE joby).
+name: e2e-start
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  filter:
+    if: github.event.issue.pull_request == null && startsWith(github.event.comment.body, '/e2e-start')
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.filter.outputs.run_id }}
+      timeout: ${{ steps.filter.outputs.timeout }}
+      selected: ${{ steps.filter.outputs.selected }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+
+      # Argumenty z komentarza: /e2e-start <slug> <env_url> [ref]
+      - name: Zbuduj wejście filtra
+        id: input
+        run: |
+          read -r _cmd slug env_url ref <<< "${{ github.event.comment.body }}"
+          jq -n --arg slug "$slug" --arg env "$env_url" --arg ref "${ref:-main}" \
+            --arg issue "${{ github.event.issue.number }}" \
+            '{slug: $slug, envUrl: $env, ref: $ref, runRef: $issue,
+              plan: {path: ("docs/prd/" + $slug + "/test-design.md")}}' > filter-in.json
+
+      - name: greenproof step filter
+        id: filter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GREENPROOF_TOKEN }}
+        run: |
+          pnpm exec greenproof step filter --config greenproof.config.mjs \
+            --in filter-in.json --out filter-out.json
+          echo "run_id=$(jq -r .runId filter-out.json)" >> "$GITHUB_OUTPUT"
+          echo "timeout=$(jq -r .timeoutMinutes filter-out.json)" >> "$GITHUB_OUTPUT"
+          echo "selected=$(jq -c .selected filter-out.json)" >> "$GITHUB_OUTPUT"
+
+  author:
+    needs: filter
+    if: needs.filter.outputs.selected != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(needs.filter.outputs.timeout) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 } # branche autora wychodzą z ref-a bazowego
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: step triage + step author + step deliver
+        env:
+          GITHUB_TOKEN: ${{ secrets.GREENPROOF_TOKEN }}
+          LITELLM_KEY: ${{ secrets.LITELLM_KEY }}
+        run: |
+          jq -n --arg run "${{ needs.filter.outputs.run_id }}" '{runId: $run}' > run.json
+          pnpm exec greenproof step triage  --config greenproof.config.mjs --in run.json
+          # Exit 3 (część case'ów blocked) nie ma wywracać joba - deliver je zamelduje.
+          pnpm exec greenproof step author  --config greenproof.config.mjs --in run.json || [ $? -eq 3 ]
+          pnpm exec greenproof step deliver --config greenproof.config.mjs --in run.json

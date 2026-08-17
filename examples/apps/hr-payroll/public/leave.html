@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR-Payroll Benchmark - Urlopy</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header class="topbar">
+        <h1>HR-Payroll Benchmark</h1>
+        <nav class="nav">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/employees.html">Pracownicy</a>
+            <a href="/payroll.html" class="nav-admin-accountant">Listy płac</a>
+            <a href="/leave.html" class="active">Urlopy</a>
+            <a href="/departments.html" class="nav-admin">Działy</a>
+            <a href="#" id="logout-link" class="logout-link">Wyloguj</a>
+        </nav>
+    </header>
+    <main class="container">
+        <div class="card">
+            <h2>Wnioski urlopowe</h2>
+            
+            <div class="card" style="background-color: #f8f9fa; margin-bottom: 20px;">
+                <h3>Złóż wniosek</h3>
+                <form id="leave-form">
+                    <div id="leave-employee-group" class="form-group nav-admin-accountant" style="display: none;">
+                        <label for="leave-employee">Pracownik</label>
+                        <select id="leave-employee" data-testid="leave-employee">
+                            <option value="">Wybierz pracownika</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="leave-type">Typ urlopu</label>
+                            <select id="leave-type" data-testid="leave-type" required>
+                                <option value="">Wybierz typ</option>
+                                <option value="vacation">Wypoczynkowy</option>
+                                <option value="sick">Chorobowy</option>
+                                <option value="unpaid">Bezpłatny</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="leave-start">Data od</label>
+                            <input type="date" id="leave-start" data-testid="leave-start" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="leave-end">Data do</label>
+                            <input type="date" id="leave-end" data-testid="leave-end" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="leave-reason">Powód / Uwagi</label>
+                        <textarea id="leave-reason" data-testid="leave-reason" rows="3"></textarea>
+                    </div>
+                    <div class="error" data-testid="leave-form-error"></div>
+                    <button type="submit" class="btn btn-primary" data-testid="leave-submit">Wyślij wniosek</button>
+                </form>
+            </div>
+
+            <h3>Historia wniosków</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Pracownik</th>
+                            <th>Typ</th>
+                            <th>Od</th>
+                            <th>Do</th>
+                            <th>Status</th>
+                            <th>Powód</th>
+                            <th>Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leave-tbody" data-testid="leave-table">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+    <script src="/leave.js"></script>
+</body>
+</html>

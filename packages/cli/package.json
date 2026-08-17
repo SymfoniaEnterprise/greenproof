@@ -1,0 +1,31 @@
+{
+  "name": "@greenproof/cli",
+  "version": "0.1.67",
+  "private": true,
+  "type": "module",
+  "description": "Thin CLI over @greenproof/core: filter|triage|author|deliver|retry|accept|release|status|knowledge with JSON file I/O - pluggable into any CI platform.",
+  "bin": {
+    "greenproof": "./dist/main.js",
+    "gp": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@greenproof/adapter-fs": "workspace:*",
+    "@greenproof/core": "workspace:*",
+    "yaml": "^2.5.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@greenproof/testing": "workspace:*"
+  },
+  "engines": { "node": ">=20" }
+}

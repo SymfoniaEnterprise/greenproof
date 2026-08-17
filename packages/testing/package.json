@@ -1,0 +1,21 @@
+{
+  "name": "@greenproof/testing",
+  "version": "0.1.67",
+  "private": true,
+  "type": "module",
+  "description": "Test utilities: in-memory fakes of all platform ports, Playwright JSON report fixtures, e2e harness helpers.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@greenproof/core": "workspace:*"
+  },
+  "engines": { "node": ">=20" }
+}

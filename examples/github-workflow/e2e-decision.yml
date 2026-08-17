@@ -1,0 +1,58 @@
+# Referencyjny workflow: decyzje człowieka na issue przebiegu.
+# /e2e-retry <case_id> <uwagi…>  → pełna pętla ponowienia (retry+triage+author+deliver)
+# /e2e-accept <case_id> [gałąź]  → jedyny push do repo testów (PR)
+# /e2e-release [waiver <case_id> <powód>…] → bramki jakości + telemetria
+name: e2e-decision
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  decide:
+    if: >
+      github.event.issue.pull_request == null &&
+      (startsWith(github.event.comment.body, '/e2e-retry') ||
+       startsWith(github.event.comment.body, '/e2e-accept') ||
+       startsWith(github.event.comment.body, '/e2e-release'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # runId przebiegu trzymany w tytule issue: "E2E <slug> [gp-…]".
+      - name: Wyciągnij runId
+        id: run
+        run: |
+          echo "run_id=$(sed -n 's/.*\[\(gp-[^]]*\)\].*/\1/p' <<< '${{ github.event.issue.title }}')" >> "$GITHUB_OUTPUT"
+
+      - name: Wykonaj decyzję
+        env:
+          GITHUB_TOKEN: ${{ secrets.GREENPROOF_TOKEN }}
+          LITELLM_KEY: ${{ secrets.LITELLM_KEY }}
+          RUN_ID: ${{ steps.run.outputs.run_id }}
+        run: |
+          body='${{ github.event.comment.body }}'
+          read -r cmd case_id rest <<< "$body"
+          case "$cmd" in
+            /e2e-retry)
+              jq -n --arg run "$RUN_ID" --arg case "$case_id" --arg notes "$rest" \
+                '{runId: $run, caseId: $case, notes: $notes}' > in.json
+              pnpm exec greenproof retry --config greenproof.config.mjs --in in.json || [ $? -eq 3 ]
+              ;;
+            /e2e-accept)
+              jq -n --arg run "$RUN_ID" --arg case "$case_id" --arg to "${rest:-main}" \
+                '{runId: $run, caseId: $case, targetBranch: $to}' > in.json
+              pnpm exec greenproof accept --config greenproof.config.mjs --in in.json
+              ;;
+            /e2e-release)
+              jq -n --arg run "$RUN_ID" '{runId: $run}' > in.json
+              # Exit 5 = bramki nie przeszły; raport i tak ląduje na issue.
+              pnpm exec greenproof release --config greenproof.config.mjs --in in.json || [ $? -eq 5 ]
+              ;;
+          esac

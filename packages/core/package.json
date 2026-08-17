@@ -1,0 +1,24 @@
+{
+  "name": "@greenproof/core",
+  "version": "0.1.67",
+  "private": true,
+  "type": "module",
+  "description": "Platform-agnostic engine for agentic authoring of Playwright E2E tests: pipeline state machine, cost caps, mutation proof, POM harvest.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "~0.3.228",
+    "@anthropic-ai/sdk": "~0.116.0",
+    "yaml": "^2.5.0",
+    "zod": "^4.0.0"
+  },
+  "engines": { "node": ">=20" }
+}

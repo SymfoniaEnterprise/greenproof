@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/plan-parser-bmad" },
+    { "path": "packages/adapter-fs" },
+    { "path": "packages/adapter-github" },
+    { "path": "packages/testing" },
+    { "path": "packages/cli" }
+  ]
+}

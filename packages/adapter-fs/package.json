@@ -1,0 +1,21 @@
+{
+  "name": "@greenproof/adapter-fs",
+  "version": "0.1.67",
+  "private": true,
+  "type": "module",
+  "description": "Reference platform adapter backed by the local filesystem and local git: ScmPort, ArtifactStore, StateStore (lockfile + CAS), HumanChannelPort (markdown files).",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@greenproof/core": "workspace:*"
+  },
+  "engines": { "node": ">=20" }
+}

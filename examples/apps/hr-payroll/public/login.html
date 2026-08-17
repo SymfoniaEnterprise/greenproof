@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR-Payroll Benchmark - Logowanie</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card card">
+            <h1>HR-Payroll Benchmark</h1>
+            <h2>Logowanie</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-username">Nazwa użytkownika</label>
+                    <input type="text" id="login-username" name="username" data-testid="login-username" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Hasło</label>
+                    <input type="password" id="login-password" name="password" data-testid="login-password" required autocomplete="current-password">
+                </div>
+                <div id="login-error" class="error" data-testid="login-error"></div>
+                <button type="submit" class="btn btn-primary" data-testid="login-submit">Zaloguj się</button>
+            </form>
+            <div class="demo-accounts">
+                <p>Konta demo:</p>
+                <ul>
+                    <li>admin / admin123</li>
+                    <li>accountant / account123</li>
+                    <li>employee / employee123</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script src="/login.js"></script>
+</body>
+</html>
