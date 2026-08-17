@@ -350,7 +350,7 @@ export default {
   platform: '@greenproof/adapter-fs',
   platformOptions: { repoDir: './tests-repo', baseDir: './platform' },
   plan: { source: 'json' },
-  model: { authTokenEnv: 'LITELLM_KEY', author: 'claude-sonnet' },
+  model: { authTokenEnv: 'LITELLM_KEY', author: 'claude-sonnet-5' },
   paths: { testsRepoDir: './tests-repo' },
 };
 ```

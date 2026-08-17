@@ -66,7 +66,7 @@ gp run --config configs/litellm.config.mjs \
   --in plan.json --app-url http://localhost:3132
 
 # Wariant B: od zera - repo testów i config powstają same przy 1. uruchomieniu:
-gp run --preset litellm --author <model-z-bramy> \
+gp run --preset litellm --author claude-sonnet-5 \
   --tests-repo ~/dev/moje-testy \
   --in plan.json --app-url http://localhost:3132
 ```

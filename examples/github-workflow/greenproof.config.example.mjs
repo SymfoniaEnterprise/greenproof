@@ -17,13 +17,14 @@ export default {
   plan: { source: 'parser', module: '@greenproof/plan-parser-bmad' },
 
   model: {
-    baseUrl: 'https://litellm.moja-firma.pl',
+    baseUrl: 'https://ai-proxy.szybkafaktura.pl',
     authTokenEnv: 'LITELLM_KEY',
-    author: 'claude-sonnet',
-    digest: 'tani-model',
+    author: 'claude-sonnet-5',
+    digest: 'claude-haiku-4-5-20251001',
     // Własne liczenie kosztu - total_cost_usd z SDK bywa błędne za bramą.
     priceTable: {
-      'claude-sonnet': { inPerMTok: 3, outPerMTok: 15, cacheReadPerMTok: 0.3, cacheWritePerMTok: 3.75 },
+      'claude-sonnet-5': { inPerMTok: 3, outPerMTok: 15, cacheReadPerMTok: 0.3, cacheWritePerMTok: 3.75 },
+      'claude-haiku-4-5-20251001': { inPerMTok: 0.8, outPerMTok: 4, cacheReadPerMTok: 0.08, cacheWritePerMTok: 1 },
     },
   },
 
