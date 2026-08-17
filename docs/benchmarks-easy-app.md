@@ -144,6 +144,8 @@ niczyjej pomocy, jest **claude-opus-5**.
 
 ## Pełne identyfikatory modeli
 
+- **Laguna-XS-2.1 33B-A3B Q4_K_M** - `GGUF:Q4_K_M`, MoE,
+  najszybszy zmierzony lokalny coder (92 t/s)
 - **Qwen3.6-27B-MTP Q5_K_M** - `unsloth/Qwen3.6-27B-MTP-GGUF:Q5_K_M`, 18,5 GB,
   spekulatywne dekodowanie draft-MTP, KV cache k=q8_0 v=f16
 - **Muse-Glimmer-30B K-Quant Dynamic Q4_K_XL** - `meta-models/Muse-Glimmer-30B-GGUF`,
@@ -152,6 +154,8 @@ niczyjej pomocy, jest **claude-opus-5**.
   draft-MTP, KV cache k=f16 v=f16, dodatkowo mmproj (wizja)
 - **Ornith-1.0-35B Q4_K_M** - `ornith-ai/Ornith-1.0-35B-GGUF:Q4_K_M`, 19,7 GB,
   MoE, szablon czatu froggeric (oficjalny wywala tool calling)
+- **Qwen3.6-35B-A3B Q8_0** - `GGUF:Q8_0`, MoE,
+  **myślenie wyłączone**, 42 t/s (najszybszy z rodziny 3.6)
 
 Uwaga: MTP mają **oba** Qweny, nie tylko 3.6 - różnią się kwantyzacją
 (Q5_K_M vs UD-Q4_K_XL) i typem cache'u KV.
