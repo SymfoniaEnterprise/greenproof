@@ -223,8 +223,8 @@ Pełna historia runów, metodyka i monitoring: [docs/benchmarks.md](docs/benchma
 > automatycznie: `gp run` w CLI (jeden proces), a w CI i GitHub Actions - kolejne
 > `gp step <krok>` wywoływane sekwencyjnie. Po pojedyncze komendy sięgasz tylko wtedy,
 > gdy masz taką potrzebę (diagnostyka, ponowienie). Konfigurację wstępną również
-> przeprowadza asystent AI (skill `greenproof-start`) w rozmowie - bez wpisywania
-> jakichkolwiek komend.
+> przeprowadza asystent AI (skill `greenproof-start`) w rozmowie - nie wpisujesz
+> komend samodzielnie, prowadzi Cię pytaniami i uruchamia je za Ciebie (za Twoją zgodą).
 
 ```
 filter → triage → author → [dowód mutacyjny] → deliver → auto-accept (pipeline) → release (człowiek, bramki)

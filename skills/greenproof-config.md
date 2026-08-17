@@ -31,7 +31,7 @@ gp run --tests-repo <p> --preset codex-sub --author 'gpt-5.6-luna(max)' \
 oznaczone miejsce:
 
 ```js
-// ── TU ZMIENIASZ MODEL ── (preset litellm ma tu placeholder do wypełnienia)
+// ── TU ZMIENIASZ MODEL ── (wpisz konkretny alias z bramy; nazwy da `gp models`)
 author: 'claude-sonnet-5',
 ```
 
