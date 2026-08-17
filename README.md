@@ -219,6 +219,13 @@ Pełna historia runów, metodyka i monitoring: [docs/benchmarks.md](docs/benchma
 
 ## 3. Pipeline i komendy
 
+> **Tych komend zwykle nie wołasz ręcznie.** Cały pipeline poniżej odpalają za Ciebie
+> automatycznie: `gp run` w CLI (jeden proces), a w CI i GitHub Actions - kolejne
+> `gp step <krok>` wywoływane sekwencyjnie. Po pojedyncze komendy sięgasz tylko wtedy,
+> gdy masz taką potrzebę (diagnostyka, ponowienie). Konfigurację wstępną również
+> przeprowadza asystent AI (skill `greenproof-start`) w rozmowie - bez wpisywania
+> jakichkolwiek komend.
+
 ```
 filter → triage → author → [dowód mutacyjny] → deliver → auto-accept (pipeline) → release (człowiek, bramki)
 ```

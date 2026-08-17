@@ -96,7 +96,7 @@ przy pierwszym uruchomieniu:
 ```sh
 gp run \
   --tests-repo ~/dev/moje-testy \
-  --preset litellm --author <model-z-bramy> \
+  --preset litellm --author claude-sonnet-5 \
   --in plan.json --app-url http://localhost:3132 --out run-result.json
 ```
 

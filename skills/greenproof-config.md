@@ -22,7 +22,7 @@ Gotowe configi referencyjne: `configs/litellm.config.mjs`,
 pierwszorazowej konfiguracji z `--tests-repo` bez `--config`):
 
 ```sh
-gp run --tests-repo <p> --init-only --preset litellm --author <model-z-bramy>
+gp run --tests-repo <p> --init-only --preset litellm --author claude-sonnet-5
 gp run --tests-repo <p> --preset codex-sub --author 'gpt-5.6-luna(max)' \
        --in plan.json --app-url <url>
 ```
@@ -32,7 +32,7 @@ oznaczone miejsce:
 
 ```js
 // ── TU ZMIENIASZ MODEL ── (preset litellm ma tu placeholder do wypełnienia)
-author: '<model-z-bramy>',
+author: 'claude-sonnet-5',
 ```
 
 Nazwę modelu bierz z listy providera, nie z pamięci - nazwy w bramie zmieniają
@@ -90,7 +90,7 @@ Klucz = **BAZOWA** nazwa modelu (bez sufiksu effortu - tak wraca w
 
 ```js
 priceTable: {
-  '<model-z-bramy>': { inPerMTok: 0.075, outPerMTok: 0.3, cacheReadPerMTok: 0.0075 },
+  'claude-sonnet-5': { inPerMTok: 3, outPerMTok: 15, cacheReadPerMTok: 0.3 },
 }
 ```
 
