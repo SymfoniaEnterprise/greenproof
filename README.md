@@ -40,11 +40,16 @@ wyboru. Windows jest wspierany natywnie (cmd/PowerShell, bez WSL)
 i weryfikowany jobem CI na `windows-latest` - **jeśli coś nie działa na
 Windowsie, zgłoś to**.
 
-Gdzie lądują wrappery: `~/.local/bin` na Linuksie i macOS (nadpiszesz przez
-`XDG_BIN_HOME`), `%LOCALAPPDATA%\greenproof\bin` na Windowsie - tam jako pliki
+<details>
+<summary>Gdzie lądują wrappery i co z PATH-em</summary>
+
+Wrappery lądują w `~/.local/bin` na Linuksie i macOS (nadpiszesz przez
+`XDG_BIN_HOME`), a na Windowsie w `%LOCALAPPDATA%\greenproof\bin` - jako pliki
 `.cmd`, które zwracają kod wyjścia CLI (3/5/10 sterują przepływem CI). PATH-u
 skrypt nie rusza sam: gdy katalog docelowy nie jest w PATH, wypisuje gotową
 linijkę do dopisania.
+
+</details>
 
 ### Windows: w PowerShellu nie wołaj `gp`
 
