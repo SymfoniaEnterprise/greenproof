@@ -57,12 +57,10 @@ linijkę do dopisania.
 pierwszeństwo przed komendami z PATH. `gp --version` nie uruchomi więc CLI,
 tylko cmdlet - z mylącym komunikatem w rodzaju
 `Cannot find path 'C:\...\--version' because it does not exist.`. W PowerShellu
-używaj pełnej nazwy albo wrappera z rozszerzeniem (rozszerzenie omija tablicę
-aliasów):
+używaj pełnej nazwy `greenproof`:
 
 ```powershell
-greenproof run --tests-repo C:\moje-testy   # zalecane
-gp.cmd run --tests-repo C:\moje-testy       # równoważne
+greenproof run --tests-repo C:\moje-testy
 ```
 
 Jeśli chcesz odzyskać krótkie `gp`, zdejmij alias raz na stałe w swoim profilu
