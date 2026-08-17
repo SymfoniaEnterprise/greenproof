@@ -65,10 +65,6 @@ powiedzieć modelowi to, czego od niego wymaga, w momencie, w którym tego
 wymaga** - a modele lokalne są najczulszym wykrywaczem takich luk, bo nie
 nadrabiają domysłem.
 
-W kolejce po tych runach: **GLM 5.2** - przy czym kanał abonamentowy jest
-2026-08-16 niesprawny (patrz `benchmarks-easy-app.md`), więc realnie
-pójdzie przez OpenRouter (`z-ai/glm-5.2`).
-
 Run gemini poszedł presetem `litellm` z autorem `gemini-3.7-openrouter`
 (stawki OpenRoutera) i eskalacją fixture na `deepseek-v4-flash` - nie na kanał
 abonamentowy, bo ten tego dnia padał.
