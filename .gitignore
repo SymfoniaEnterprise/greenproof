@@ -3,6 +3,8 @@ dist/
 *.tsbuildinfo
 .env
 .env.*
+!.env.template
+!configs/.env.template
 coverage/
 .greenproof-runs/
 
