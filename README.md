@@ -40,11 +40,16 @@ wyboru. Windows jest wspierany natywnie (cmd/PowerShell, bez WSL)
 i weryfikowany jobem CI na `windows-latest` - **jeśli coś nie działa na
 Windowsie, zgłoś to**.
 
-Gdzie lądują wrappery: `~/.local/bin` na Linuksie i macOS (nadpiszesz przez
-`XDG_BIN_HOME`), `%LOCALAPPDATA%\greenproof\bin` na Windowsie - tam jako pliki
+<details>
+<summary>Gdzie lądują wrappery i co z PATH-em</summary>
+
+Wrappery lądują w `~/.local/bin` na Linuksie i macOS (nadpiszesz przez
+`XDG_BIN_HOME`), a na Windowsie w `%LOCALAPPDATA%\greenproof\bin` - jako pliki
 `.cmd`, które zwracają kod wyjścia CLI (3/5/10 sterują przepływem CI). PATH-u
 skrypt nie rusza sam: gdy katalog docelowy nie jest w PATH, wypisuje gotową
 linijkę do dopisania.
+
+</details>
 
 ### Windows: w PowerShellu nie wołaj `gp`
 
@@ -52,12 +57,10 @@ linijkę do dopisania.
 pierwszeństwo przed komendami z PATH. `gp --version` nie uruchomi więc CLI,
 tylko cmdlet - z mylącym komunikatem w rodzaju
 `Cannot find path 'C:\...\--version' because it does not exist.`. W PowerShellu
-używaj pełnej nazwy albo wrappera z rozszerzeniem (rozszerzenie omija tablicę
-aliasów):
+używaj pełnej nazwy `greenproof`:
 
 ```powershell
-greenproof run --tests-repo C:\moje-testy   # zalecane
-gp.cmd run --tests-repo C:\moje-testy       # równoważne
+greenproof run --tests-repo C:\moje-testy
 ```
 
 Jeśli chcesz odzyskać krótkie `gp`, zdejmij alias raz na stałe w swoim profilu
@@ -82,13 +85,14 @@ których dowód nie rozstrzygnął.
 
 ### Zacznij tutaj: konfiguracja z asystentem AI
 
-Najprostsza droga do pierwszego przebiegu. Asystent AI prowadzi wywiad
-onboardingowy (repo testów, aplikacja, platforma, provider, model, token,
-plan testów), generuje config, uruchamia preflight i podaje gotową komendę
-`gp run` - ty tylko odpowiadasz na pytania i zatwierdzasz. Jak zacząć:
-
-- **Claude Code** - wpisz `/greenproof-start`.
-- **Inny asystent** - poproś po prostu o skonfigurowanie greenproof.
+> [!TIP]
+> **Najprostsza droga do pierwszego przebiegu.** Asystent AI prowadzi wywiad
+> onboardingowy (repo testów, aplikacja, platforma, provider, model, token,
+> plan testów), generuje config, uruchamia preflight i podaje gotową komendę
+> `gp run` - ty tylko odpowiadasz na pytania i zatwierdzasz. Jak zacząć:
+>
+> - **Claude Code** - wpisz `/greenproof-start`.
+> - **Inny asystent** - poproś po prostu o skonfigurowanie greenproof.
 
 Przewodnik skilla: [`skills/greenproof-start.md`](skills/greenproof-start.md).
 
@@ -215,7 +219,8 @@ produkuje „zieleni na skróty", tylko potrzebuje na nią więcej czasu GPU.
 **Wzorzec:** mocny model płaci za odkrycie raz (run prewencyjny $0,19-0,86,
 ratunkowy $1,14-1,30), tani autor dowozi resztę - a dowód mutacyjny odsiewa
 fałszywą zieleń niezależnie od modelu.
-Pełna historia runów, metodyka i monitoring: [docs/benchmarks.md](docs/benchmarks.md).
+Bugi, problemy napotkane w runach i wnioski (plus monitoring i efforty):
+[docs/benchmarks.md](docs/benchmarks.md).
 
 ## 3. Pipeline i komendy
 
@@ -223,8 +228,8 @@ Pełna historia runów, metodyka i monitoring: [docs/benchmarks.md](docs/benchma
 > automatycznie: `gp run` w CLI (jeden proces), a w CI i GitHub Actions - kolejne
 > `gp step <krok>` wywoływane sekwencyjnie. Po pojedyncze komendy sięgasz tylko wtedy,
 > gdy masz taką potrzebę (diagnostyka, ponowienie). Konfigurację wstępną również
-> przeprowadza asystent AI (skill `greenproof-start`) w rozmowie - bez wpisywania
-> jakichkolwiek komend.
+> przeprowadza asystent AI (skill `greenproof-start`) w rozmowie - nie wpisujesz
+> komend samodzielnie, prowadzi Cię pytaniami i uruchamia je za Ciebie (za Twoją zgodą).
 
 ```
 filter → triage → author → [dowód mutacyjny] → deliver → auto-accept (pipeline) → release (człowiek, bramki)

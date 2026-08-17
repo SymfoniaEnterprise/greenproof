@@ -1,52 +1,20 @@
-# Benchmarki greenproof
+# Benchmarki greenproof - bugi, problemy i wnioski
 
-Zbiorczy raport przebiegów pełnego pipeline'u greenproof
-(`filter → triage → author → deliver → accept → release`) na dwóch appkach
-demo, z porównaniem modeli-autorów podpiętych przez bramę LiteLLM albo przez
-mostki subskrypcyjne (CLIProxyAPI).
+Pełne tabele wyników per model żyją w dwóch dedykowanych, uzupełnianych na
+bieżąco dokumentach:
 
-- **Easy app** - DemoPay (`~/dev/demopay-demo`, poza repo), 2 case'y golden path
-  (`E2E-LOGIN-001` P0, `E2E-PAYROLL-002` P1). Prosty flow, do szybkiej
-  weryfikacji nowego modelu/konfiguracji.
-- **Complex app** - HR-Payroll demo (`~/dev/hr-payroll-demo`, poza repo;
-  przeniesiona z dawnego `examples/demo-app-benchmark`), 10 case'ów (`examples/benchmark-plan.json`):
-  role, paginacja serwerowa, optimistic locking, PESEL z cyfrą kontrolną,
-  workflow statusów, nakładanie urlopów, celowy churn payrollu.
+- **Easy app (DemoPay)** - `benchmarks-easy-app.md`. 2 case'y golden path
+  (`E2E-LOGIN-001` P0, `E2E-PAYROLL-002` P1 churn-prone `lista-plac`).
+- **Complex app (HR-Payroll)** - `benchmarks-complex-app.md`. 10 case'ów
+  (`examples/benchmark-plan.json`): role, paginacja serwerowa, optimistic
+  locking, PESEL z cyfrą kontrolną, workflow statusów, nakładanie urlopów,
+  celowy churn payrollu.
 
-## Jak odpalić
-
-- `pnpm demo` - jedna komenda dla osoby nietechnicznej: pełny przebieg na
-  complex app (domyślnie autor **sonnet 5** przez bramę LiteLLM;
-  `pnpm demo --model deepseek` = deepseek flash przez tę samą bramę;
-  `pnpm demo --dry-run` tylko przygotowanie + preflight). Workdir demo:
-  `~/.local/share/greenproof/demo/`.
-- `node scripts/golden-path.mjs --model deepseek|qwen|qwen36|qwen36a3b|ornith|glimmer|glm|gemini37|gemini|luna|opus|sonnet [--cases 1|2]`
-  - easy app, pełna pętla na adapter-fs.
-- `node scripts/benchmark-path.mjs --model deepseek|luna|qwen38 [--keep]` - trudna
-  appka, pełna pętla z fallbackiem fixture-author (eskalacja per model:
-  deepseek → claude-opus-5 na subskrypcji, luna → gpt-5.6-sol przez CLIProxyAPI,
-  qwen38 → deepseek-flash-max przez bramę).
-- Ręcznie, bez owijki harnessu - jedna komenda `gp run` z gotowym
-  configiem z `configs/` (zob. `docs/configuration.md`) i planem benchmarku:
-
-  ```sh
-  gp run --config configs/litellm.config.mjs \
-    --tests-repo ~/dev/moje-testy \
-    --in examples/benchmark-plan.json --app-url http://localhost:3132
-  ```
-
-Wspólne dla obu harnessów:
-
-- Workdir runu jest **trwały**: `~/.local/share/greenproof/runs/<runId>`
-  (XDG, `runId` z sufiksem timestamp), bez auto-rm; sprzątanie tylko świadome
-  (`gp clean`, po release). Stan pipeline'u:
-  `<workdir>/platform/state/<runId>.json`.
-- Live progress na stderr steruje zmienna `GREENPROOF_PROGRESS` (`auto`
-  domyślnie: TTY → tablica statusu odświeżana w miejscu, inaczej linie plain
-  `[gp HH:MM:SS] …`; `github` dopisuje też Job Summary; `json` daje NDJSON).
-  Stdout zostaje czystym JSON-em wyniku.
-- Archiwa starszych/ręcznie zebranych przebiegów (ledgery, transcrypty,
-  tarballe per run) są trzymane lokalnie, poza repo - ważą dziesiątki MB.
+Ten dokument zbiera to, czego w tamtych tabelach nie ma: **bugi** (w pipelinie
+i w testowanych appkach), **problemy napotkane w trakcie runów** oraz **wnioski
+i mechanizmy potwierdzone w boju**. Rekordy nieudanych runów zostają tam, gdzie
+czegoś uczą; pominięto porażki z limitów czysto zewnętrznych (wyczerpana kwota
+abonamentu, darmowy próg API) - nie mówią nic o modelu ani o pipelinie.
 
 ## Easy app (DemoPay)
 
@@ -64,8 +32,6 @@ LiteLLM (klucz wirtualny) · Opus: subskrypcja Claude (bez bramy).
 
 | Model | LOGIN-001 (P0) | PAYROLL-002 (P1) | Koszt runa | Release |
 |---|---|---|---|---|
-| **minimax-m3** | ❌ 429 „Token Plan usage limit reached" | ❌ jw. | $0.00 | - (kwota abonamentu wyczerpana; decyzja: abonament nie będzie odnawiany - minimax usunięty z porównania) |
-| **gemini-3.6-flash (AI Studio, darmowy próg)** | 🚧 blocked `time` (a1, $0.00, 34 tur, zrobiony POM `LoginPage.ts` i commit `a86f91c`) | 🚧 blocked `time` (0 tur) | **$0.00** | **FAIL** (darmowy próg niewystarczający na pełny run; limit 25 min przekroczony przez 8 RPM & fallbacki) |
 | **deepseek-v4-flash** | ✅ released (a1, ~$0.01, dowód valid) - po drodze **pad runnera i wznowienie z przejęciem lease** | 🚧 blocked `fixture-gap` (bezpiecznik seedu, 46 tur arrange, $0.008, 0 runów pw) | **~$0.02** | **PASS** (P1 z waiverem fixture-gap) |
 | **gpt-5.6-luna (subskrypcja przez mostek OAuth)** | ✅ released (a2, est. $2.28, 67 tur; a1 odrzucona mutacja) | 🚧 blocked `fixture-gap` (a1, est. $0.53, 45 tur arrange, 0 runów pw) | **$0.00 realnie** (SDK est. $2.81) | **FAIL** (P1 bez waivera) |
 | **claude-opus-5** | ✅ released (a3 human-retry, $1.27, 48 tur, **reuse LoginPage+EmployeesPage**) | ✅ released (**a1**, $2.21, 87 tur, seed przez API, dowód: netto ±1 grosz vs oracle) | **$6.58** (w tym 2 nieudane próby LOGIN po $1.36-1.73) | **PASS** bez waiverów |
@@ -257,7 +223,6 @@ Koszt realny: **$0.49** (fixture z abonamentu); qwen36 lokalnie $0. Kwoty w rapo
   ale P1 zatrzymała na `fixture-gap`; nie ma dowodu, że było to załamanie modelu, bo nie wystartował
   jeszcze żaden test Playwright. CLIProxy obsłużył 121 żądań `/v1/messages` kodem 200, bez 5xx;
   pojawiło się jedno ostrzeżenie pętli SDK po wyniku z `stop_reason=tool_use`, ale nie przerwało runu.
-- gemini-3.6-flash (darmowy próg AI Studio): sprawnie tworzy strukturę i kod testów (zbudował POM `LoginPage.ts`, 34 tury, commit `a86f91c`), ale niska przepustowość darmowego progu (limit 8 RPM wywołujący seriami retries i fallbacki do Qwen3.8) powoduje, że 25-minutowy cap czasu per case mija przed ukończeniem pętli. Darmowy próg jest niewystarczający do automatycznego pełnego runu bez wyższych limitów RPM.
 - Warto rozważyć osobny licznik runów playwright dla fazy dowodu (opus a1 zjadł limit na
   poprawkę wyścigu i zabrakło mu runa na finalny czerwony).
 
@@ -431,7 +396,7 @@ dostał najlepsze możliwe uzasadnienie; do podniesienia priorytetu.
 wniosek employee 201, nakładanie 422, zły typ 400) - powtórka runu mierzy od
 teraz czyste autorowanie i 10/10 jest osiągalne.
 
-## Wcześniejsze próby (minimax / kanał abonamentowy / fallback)
+## Wcześniejsze próby (kanał abonamentowy / fallback)
 
 Pierwsze przebiegi pełnego pipeline'u greenproof na trudnej appce, sprzed
 poprawek z `docs/tuning-backlog.md` i sprzed wpisu bramy z wymuszonym
@@ -444,15 +409,8 @@ Agent SDK → brama LiteLLM (`http://127.0.0.1:4000`). Adapter-fs, repo testów:
 
 | Run | Model (przez bramę) | Config | RunId |
 |---|---|---|---|
-| minimax | `minimax-m3` (minimax.io) | `benchmark-minimax.config.mjs` | `...2249` |
 | abonament | `deepseek-flash` | `benchmark-abonament.config.mjs` | `...2250` |
 | fallback | `deepseek-v4-flash` (OpenRouter 0731) | `benchmark-fallback.config.mjs` | `...0922` |
-
-### Run minimax (`minimax-m3`) - WYNIKI USUNIĘTE
-
-Run zakończył się przedwcześnie (wyczerpanie budżetu w trakcie). Artefakty
-usunięte na prośbę użytkownika. Zarejestrowano przed usunięciem: 0/10
-delivered - 6× attempt_failed, 2× blocked, 2× interrupted (0 tur).
 
 ### Run abonamentowy (`deepseek-flash`)
 
@@ -497,35 +455,30 @@ Run zatrzymany na życzenie użytkownika po 3 dostarczonych case'ach
 
 ### Porównanie (skorygowane o niepełny przebieg)
 
-| Metryka | minimax-m3 | ds-flash (abonament) | ds-v4-flash (częściowo) |
-|---|---|---|---|
-| Delivered | 0/10 | 1/10 | 3/5 ukończonych |
-| Koszt / delivered case | - | $1.91 | ~$0.27 |
-| Średni koszt / case | ~$0.9 | ~$0.31 | ~$0.25 |
-| Błędy infrastruktury | 2× interrupted | `No tool output` (Console Go) | brak |
+| Metryka | ds-flash (abonament) | ds-v4-flash (częściowo) |
+|---|---|---|
+| Delivered | 1/10 | 3/5 ukończonych |
+| Koszt / delivered case | $1.91 | ~$0.27 |
+| Średni koszt / case | ~$0.31 | ~$0.25 |
+| Błędy infrastruktury | `No tool output` (Console Go) | brak |
 
 **Wnioski:**
 
 1. **deepseek-v4-flash 0731 (OpenRouter) wyraźnie najlepszy**: 3 delivered
    z dowodem mutacyjnym po ~0.3-0.6 USD/case, 0 błędów infrastruktury.
-2. **minimax-m3 nie nadaje się jako autor testów** - 0 delivered, 2 sesje
-   padły przy 0 turach (interrupted), koszt bez efektu. Potwierdza notkę
-   w SKILL.md delegowania ("NIE do tekstu - reasoning zjada tokeny").
-3. **deepseek-flash (abonament) ma problem z tool-callami** przez
+2. **deepseek-flash (abonament) ma problem z tool-callami** przez
    Console Go (`No tool output found`) - nie nadaje się do pracy
    narzędziowej jak playwright/autorowanie; jako model czysto tekstowy
    działa, ale sesje agentowe padają. (Rozwiązane w Run 2 trudnej appki
    wpisem bramy `deepseek-flash-max` z wymuszonym effortem - zero
    błędów tool-callingu.)
-4. Najtrudniejsze case'y dla wszystkich modeli: **payroll-create-churn**
+3. Najtrudniejsze case'y dla wszystkich modeli: **payroll-create-churn**
    (losowy 503 + długie delay) i **roles-employee-scope** (wymaga
    wielosesyjnej weryfikacji ról). Najłatwiejsze: **login-\***.
-5. Auto-retry (maxAutoRetries: 1) działa - attempt_failed → 2. próba.
+4. Auto-retry (maxAutoRetries: 1) działa - attempt_failed → 2. próba.
 
 ### Uwagi techniczne
 
-- Artefakty minimaxa usunięte na życzenie użytkownika
-  (`benchmark-platform-minimax/`).
 - Gałęzie `author/*` w `benchmark-tests` są efemeryczne - pipeline
   autorów odtwarza je z commitu bazowego przy każdej próbie; usunięte
   gałęzie fallbacka zostały odtworzone z reflog (commity `login-success`
