@@ -19,7 +19,7 @@ export interface DeliverParams {
   runId: string;
   /**
    * Auto-akceptacja włączona (wpływa TYLKO na treść raportu). Domyślnie false -
-   * `gp step deliver` i `retry` nie auto-akceptują, tylko `run`.
+   * `grp step deliver` i `retry` nie auto-akceptują, tylko `run`.
    */
   autoAccept?: boolean;
 }

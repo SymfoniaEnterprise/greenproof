@@ -16,7 +16,7 @@ w `/tmp` - reboot je kasuje; dziś ratowaliśmy je ręczną archiwizacją.
   z konfigu), nie w `os.tmpdir()`.
 - W bibliotece: retencja artefaktów sprzężona z cyklem życia case'a - **artefakty
   case'a wolno usuwać dopiero po jego zaakceptowaniu** (accept/release), nigdy
-  wcześniej; sprzątanie jako świadoma komenda (`gp clean --released`),
+  wcześniej; sprzątanie jako świadoma komenda (`grp clean --released`),
   nie efekt uboczny.
 - W CI (GitHub/platformy firmowe) to załatwia ArtifactStore platformy - problem
   dotyczy głównie adapter-fs i harnessów lokalnych.
@@ -139,7 +139,7 @@ Następna iteracja (po nowym runie):
       liczenie statusów jest w jednym miejscu. Koszt podany dwukrotnie:
       `totals.costUsd` (suma ledgerów) i `totals.costUsdState` (stan) -
       rozjazd to sesje fixture i ma być widoczny. Krok: `steps/stats.ts`,
-      komenda `gp status --run <id> --cases` (tylko odczyt, JSON na stdout).
+      komenda `grp status --run <id> --cases` (tylko odczyt, JSON na stdout).
 - [x] **8.8 Fantomowy koszt SDK przy zerowym priceTable (bug, run qwen)** -
       ✅ NAPRAWIONE 2026-08-16. Gdy priceTable miał wpis z zerowymi stawkami
       (modele lokalne/subskrypcje), `author.ts` przy koszcie 0 sięgał po koszt

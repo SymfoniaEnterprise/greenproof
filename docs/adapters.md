@@ -64,7 +64,7 @@ interface ArtifactStore {
 **Kontrakt retencji:** `delete` jest opcjonalne. Implementuje je adapter,
 w którym retencją artefaktów zarządza greenproof (`adapter-fs` - lokalne
 runy). Platformy z własnym cyklem życia artefaktów (GitHub Actions,
-platformy firmowe) go NIE implementują - wtedy `gp clean` odmawia
+platformy firmowe) go NIE implementują - wtedy `grp clean` odmawia
 typowanym błędem (`ArtifactDeleteUnsupportedError`, exit 2) zamiast po
 cichu nic nie robić. Rdzeń NIGDY nie woła `delete` poza jawnym krokiem
 `clean`, a `clean` usuwa artefakty case'a wyłącznie po `released`

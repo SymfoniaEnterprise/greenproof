@@ -141,10 +141,10 @@ describe('run', () => {
     expect(unknown.out).toEqual([]);
   });
 
-  it('stara nazwa kroku → 2 z podpowiedzią migracji do gp step <krok>', async () => {
+  it('stara nazwa kroku → 2 z podpowiedzią migracji do grp step <krok>', async () => {
     const io = capture();
     expect(await run(['filter', '--config', 'gp.json'], io.options)).toBe(2);
-    expect(io.err.join()).toMatch(/przeniesiona: użyj `gp step filter`/);
+    expect(io.err.join()).toMatch(/przeniesiona: użyj `grp step filter`/);
     expect(io.out).toEqual([]);
   });
 
@@ -232,7 +232,7 @@ describe('run', () => {
     const io = capture();
     expect(await run(['status', '--tests-repo', repoDir, '--run', 'gp-1'], io.options)).toBe(2);
     const err = io.err.join('');
-    expect(err).toMatch(/gp run --tests-repo/);
+    expect(err).toMatch(/grp run --tests-repo/);
     expect(err).toMatch(/--init-only/);
     expect(err).toMatch(/--config/);
   });
@@ -480,10 +480,10 @@ describe('run', () => {
     expect('reusedPomsTop' in out.totals).toBe(false);
   });
 
-  it('stats daje exit 2 z podpowiedzią gp status --cases', async () => {
+  it('stats daje exit 2 z podpowiedzią grp status --cases', async () => {
     const io = capture();
     expect(await run(['stats', '--config', 'gp.json', '--run', 'r'], io.options)).toBe(2);
-    expect(io.err.join()).toMatch(/przeniesiona: użyj `gp status --cases`/);
+    expect(io.err.join()).toMatch(/przeniesiona: użyj `grp status --cases`/);
     expect(io.out).toEqual([]);
   });
 
@@ -1018,7 +1018,7 @@ describe('run', () => {
     const repoDir = await initRepo();
     const initIo = capture();
     expect(await run(['init', '--tests-repo', repoDir], initIo.options)).toBe(2);
-    expect(initIo.err.join('')).toMatch(/Komenda `init` została przeniesiona: użyj `gp run --tests-repo <p> --init-only`/);
+    expect(initIo.err.join('')).toMatch(/Komenda `init` została przeniesiona: użyj `grp run --tests-repo <p> --init-only`/);
 
     const stepIo = capture();
     expect(await run(['step', 'filter', '--init-only', '--config', 'cfg.json'], stepIo.options)).toBe(2);

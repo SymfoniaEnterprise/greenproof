@@ -14,7 +14,7 @@ Pełny opis pól: `docs/config-reference.md`. Mostki subskrypcyjne:
 
 Gotowe configi referencyjne: `configs/litellm.config.mjs`,
 `configs/codex.config.mjs`, `configs/claude.config.mjs` (opis pól:
-`docs/config-reference.md`). Generator własnego: `gp run --tests-repo <ścieżka> --init-only --preset <p>` (repo musi mieć `.git`).
+`docs/config-reference.md`). Generator własnego: `grp run --tests-repo <ścieżka> --init-only --preset <p>` (repo musi mieć `.git`).
 
 ## 2. Zmiana modelu - dwie drogi
 
@@ -22,8 +22,8 @@ Gotowe configi referencyjne: `configs/litellm.config.mjs`,
 pierwszorazowej konfiguracji z `--tests-repo` bez `--config`):
 
 ```sh
-gp run --tests-repo <p> --init-only --preset litellm --author claude-sonnet-5
-gp run --tests-repo <p> --preset codex-sub --author 'gpt-5.6-luna(max)' \
+grp run --tests-repo <p> --init-only --preset litellm --author claude-sonnet-5
+grp run --tests-repo <p> --preset codex-sub --author 'gpt-5.6-luna(max)' \
        --in plan.json --app-url <url>
 ```
 
@@ -31,7 +31,7 @@ gp run --tests-repo <p> --preset codex-sub --author 'gpt-5.6-luna(max)' \
 oznaczone miejsce:
 
 ```js
-// ── TU ZMIENIASZ MODEL ── (wpisz konkretny alias z bramy; nazwy da `gp models`)
+// ── TU ZMIENIASZ MODEL ── (wpisz konkretny alias z bramy; nazwy da `grp models`)
 author: 'claude-sonnet-5',
 ```
 
@@ -39,7 +39,7 @@ Nazwę modelu bierz z listy providera, nie z pamięci - nazwy w bramie zmieniaj�
 się po rekonfiguracji:
 
 ```sh
-gp models --config configs/<preset>.config.mjs   # { endpoint, available, models }
+grp models --config configs/<preset>.config.mjs   # { endpoint, available, models }
 ```
 
 Brak listy (`available: false` z notą `note`) to cecha bramy, nie błąd. Wariant
@@ -59,7 +59,7 @@ LiteLLM nigdy nie był wymogiem - wymogiem jest ten kontrakt. Dlatego po KAŻDEJ
 zmianie providera/endpointu, PRZED pierwszym runem:
 
 ```sh
-gp preflight --config <config>
+grp preflight --config <config>
 ```
 
 Ping + wymuszony tool-call. Exit 2 = endpoint niezdatny (najczęściej: mostek
@@ -81,7 +81,7 @@ podajesz tylko nazwę modelu. Inny provider (np. Claude wprost) podasz w
 configu: `fixtureAuthor: { model, baseUrl, authTokenEnv }`.
 
 Obecność `model.fixtureAuthor` włącza też **prewencyjne** sesje fixture per
-churn-prone typ przed partią autora (w `gp run`).
+churn-prone typ przed partią autora (w `grp run`).
 
 ## 5. `priceTable` - miękkie i twarde capy $
 
@@ -171,10 +171,10 @@ ograniczeniem kosztu. Najpierw diagnoza z ledgera.
 
 ## 9. Checklista przed pierwszym runem na nowym modelu
 
-1. Model widoczny w `gp models` (lista `/v1/models` providera).
+1. Model widoczny w `grp models` (lista `/v1/models` providera).
 2. `author` (i ewentualny `fixtureAuthor`) ustawiony flagą albo w oznaczonym
    miejscu configu.
 3. `priceTable` ma wpis na bazową nazwę modelu (zera dla subskrypcji/lokalnych).
 4. Token w `.env` obok configu albo w env.
-5. `gp preflight --config <c>` → exit 0.
+5. `grp preflight --config <c>` → exit 0.
 6. Dla modelu lokalnego: `caps.firstTurnTimeoutMinutes` ~15.

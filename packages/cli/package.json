@@ -6,7 +6,7 @@
   "description": "Thin CLI over @greenproof/core: filter|triage|author|deliver|retry|accept|release|status|knowledge with JSON file I/O - pluggable into any CI platform.",
   "bin": {
     "greenproof": "./dist/main.js",
-    "gp": "./dist/main.js"
+    "grp": "./dist/main.js"
   },
   "exports": {
     ".": {

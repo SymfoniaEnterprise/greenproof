@@ -1,4 +1,4 @@
-// setup-cli.mjs - zaklada wrappery `gp` i `greenproof` wskazujace na build
+// setup-cli.mjs - zaklada wrappery `grp` i `greenproof` wskazujace na build
 // dist monorepo. Repo moze stac gdziekolwiek - sciezke ustalamy z polozenia
 // TEGO skryptu (import.meta.url), nie z process.cwd().
 //
@@ -37,7 +37,7 @@ function defaultBinDir() {
 }
 
 const targetDir = process.env.XDG_BIN_HOME || defaultBinDir();
-const wrapperNames = ["gp", "greenproof"];
+const wrapperNames = ["grp", "greenproof"];
 
 /** Nazwa pliku wrappera - na Windowsie PATHEXT wymaga rozszerzenia. */
 function wrapperFile(name) {
@@ -170,25 +170,6 @@ function pathHint() {
   );
 }
 
-/**
- * Kolizja nazwy `gp` w PowerShellu. `gp` jest tam WBUDOWANYM aliasem
- * `Get-ItemProperty`, a aliasy rozwiązują się przed komendami z PATH - `gp run`
- * uruchomi cmdlet, nie CLI, i wywali się na "Cannot find path ... --version".
- * Alias jest w każdej wersji PowerShella, więc nie ma czego wykrywać: na
- * Windowsie mówimy o tym zawsze, zaraz po założeniu wrapperów. W cmd.exe
- * problemu nie ma (tam `gp` trafia w gp.cmd przez PATHEXT).
- */
-function powershellAliasHint() {
-  return (
-    `\n[setup-cli] UWAGA (PowerShell): "gp" to wbudowany alias Get-ItemProperty` +
-    ` i ma pierwszenstwo\n  przed komenda z PATH - "gp run ..." uruchomi cmdlet, nie greenproofa.` +
-    `\n  W PowerShellu wolaj "greenproof ..." albo "gp.cmd ..." (rozszerzenie omija aliasy).` +
-    `\n  Alias mozna tez zdjac na stale w profilu (notepad $PROFILE):\n` +
-    `\n  Remove-Item Alias:gp -Force\n` +
-    `\n  W cmd.exe problemu nie ma.\n`
-  );
-}
-
 function runWrapper(name) {
   const dest = path.join(targetDir, wrapperFile(name));
   const argv = spawnArgv(dest, ["--version"]);
@@ -256,10 +237,7 @@ if (!isOnPath(targetDir)) {
   console.log(pathHint());
 }
 
-const gpVersion = runWrapper("gp");
+const grpVersion = runWrapper("grp");
 const greenproofVersion = runWrapper("greenproof");
-console.log(`\n[setup-cli] OK. gp --version -> ${gpVersion}`);
+console.log(`\n[setup-cli] OK. grp --version -> ${grpVersion}`);
 console.log(`[setup-cli] OK. greenproof --version -> ${greenproofVersion}`);
-// Na koncu, zeby zostalo na ekranie: wrapper dziala, ale sama nazwa `gp`
-// w PowerShellu do niego NIE trafia.
-if (IS_WINDOWS) console.log(powershellAliasHint());

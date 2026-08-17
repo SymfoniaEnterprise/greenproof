@@ -124,8 +124,8 @@ przejścia rzuca `InvalidTransitionError`, zamiast po cichu zepsuć stan.
 
 ## Schemat 3 · CI: krok per job, JSON między nimi
 
-W terminalu `gp run` robi wszystko w jednym procesie. W CI dzieli się to na
-osobne zadania: każde woła `gp step <krok>`, zapisuje wynik do pliku,
+W terminalu `grp run` robi wszystko w jednym procesie. W CI dzieli się to na
+osobne zadania: każde woła `grp step <krok>`, zapisuje wynik do pliku,
 a następne czyta z niego `runId`. Nic poza plikiem JSON i kodem wyjścia nie
 przechodzi między krokami - dlatego zadania mogą siedzieć na różnych maszynach.
 
@@ -152,13 +152,13 @@ Rozdzielone - dostają różne maszyny, timeouty i polityki ponawiania.
 
 ```sh
 # Łańcuch kroków: runId wyciągany z wyniku poprzedniego
-gp step filter  --config gp.config.mjs --in filter-in.json --out out/filter.json
+grp step filter  --config gp.config.mjs --in filter-in.json --out out/filter.json
 RUN_ID=$(jq -r .runId out/filter.json)
 
-gp step triage  --config gp.config.mjs --run "$RUN_ID"
-gp step author  --config gp.config.mjs --run "$RUN_ID"   # toleruj exit 3
-gp step deliver --config gp.config.mjs --run "$RUN_ID"
-gp status       --config gp.config.mjs --run "$RUN_ID" --out out/status.json
+grp step triage  --config gp.config.mjs --run "$RUN_ID"
+grp step author  --config gp.config.mjs --run "$RUN_ID"   # toleruj exit 3
+grp step deliver --config gp.config.mjs --run "$RUN_ID"
+grp status       --config gp.config.mjs --run "$RUN_ID" --out out/status.json
 ```
 
 > **Pułapka:** `--in` przyjmuje *ścieżkę do pliku*, nigdy inline JSON
@@ -179,7 +179,7 @@ flowchart TD
     ST["workflow: e2e-start<br/>workflow_dispatch albo harmonogram"]
     ISS["adapter-github zakłada issue:<br/>E2E &lt;slug&gt; [gp-…]"]
     KR["kroki pipeline'u<br/>filter → triage → fixture → author → deliver"]
-    REN["renderer github<br/>::group:: per case · [gp HH:MM:SS] · Job Summary"]
+    REN["renderer github<br/>::group:: per case · [grp HH:MM:SS] · Job Summary"]
     CZL["człowiek czyta issue<br/>tabela per case, dowody i ledgery w artefaktach"]
     DEC["workflow: e2e-decision<br/>wyzwalacz issue_comment, runId z tytułu issue"]
     AKC["retry · accept · release<br/>jedno zadanie, trzy gałęzie"]
@@ -219,7 +219,7 @@ punktowa, nie architektura.
 
 Pętla agenta wykonuje się w procesie, który ją zaimportował, a jedyny ruch na
 zewnątrz to wychodzące HTTPS do endpointu modelu. W Actions hostem jest proces
-runnera wykonujący `gp step author` - workflow niczego nie instaluje pod SDK,
+runnera wykonujący `grp step author` - workflow niczego nie instaluje pod SDK,
 nie wystawia portu, nie utrzymuje sesji między krokami; sesja rodzi się
 i umiera wewnątrz jednego kroku joba. Czyli wprost: tak, uruchamia się
 w workflowach, z wymaganiami z tabeli runnera niżej.
@@ -227,7 +227,7 @@ w workflowach, z wymaganiami z tabeli runnera niżej.
 Krok `author` nie odpala więc żadnego zewnętrznego procesu agenta. Osadza
 **Claude Agent SDK** (`query()` z `@anthropic-ai/claude-agent-sdk`)
 *we własnym procesie* - tym samym, w którym działa CLI. A skoro job CI
-i workflow Actions też wołają po prostu `gp step author`, wszystkie trzy
+i workflow Actions też wołają po prostu `grp step author`, wszystkie trzy
 środowiska używają **dokładnie tego samego SDK, tą samą ścieżką kodu**.
 Różni się tylko renderer postępu; silnik - nigdy.
 
@@ -298,7 +298,7 @@ jest brama dostępna z runnera albo API wprost.
 
 | | Terminal | Dowolne CI | GitHub Actions |
 |---|---|---|---|
-| **Wywołanie** | `gp run` - wszystko w jednym procesie | `gp step <krok>` - krok per zadanie | jak CI, plus workflow decyzji |
+| **Wywołanie** | `grp run` - wszystko w jednym procesie | `grp step <krok>` - krok per zadanie | jak CI, plus workflow decyzji |
 | **Adapter** | `adapter-fs` | `adapter-fs` lub własny | `adapter-github` |
 | **Silnik sesji** | ten sam Agent SDK, in-process | ten sam Agent SDK, in-process | ten sam Agent SDK, in-process |
 | **Postęp** | tablica `tty` odświeżana w miejscu | linie `plain` albo `json` do własnego kolektora | `github`: grupy i Job Summary |

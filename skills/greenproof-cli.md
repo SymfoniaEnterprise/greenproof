@@ -41,7 +41,7 @@ Rola agenta przy starcie runu:
    `--out`), nie z własnego stdout.
 
 Wyjątek dotyczy wyłącznie krótkich sond diagnostycznych (preflight, `curl` do
-bramy, `gp status`) - te agent wykonuje sam, bo trwają sekundy i nic nie zajmują.
+bramy, `grp status`) - te agent wykonuje sam, bo trwają sekundy i nic nie zajmują.
 
 ## 0. Warunek wstępny: aplikacja testowana MUSI działać
 
@@ -56,7 +56,7 @@ Nie odpowiada → uruchom aplikację (na tej maszynie appki demo żyją poza rep
 `~/dev/demopay-demo`, `~/dev/hr-payroll-demo`; u innego użytkownika będzie to
 jego aplikacja) i dopiero wtedy startuj run.
 
-Binarka: `gp` jest formą domyślną; `greenproof` działa jako pełny alias. Jeśli
+Binarka: `grp` jest formą domyślną; `greenproof` działa jako pełny alias. Jeśli
 nie ma żadnej na PATH, wrappery zakłada się jednym poleceniem (z korzenia repo):
 
 ```sh
@@ -76,7 +76,7 @@ gdy używamy `node` wprost, bo to skrypt repo, nie CLI.
 w `skills/greenproof-config.md`):
 
 ```sh
-gp run \
+grp run \
   --config configs/litellm.config.mjs \
   --tests-repo ~/dev/moje-testy \
   --in examples/benchmark-plan.json \
@@ -94,13 +94,13 @@ Config (`<tests-repo>/greenproof.config.mjs`) i scaffold repo testów powstają
 przy pierwszym uruchomieniu:
 
 ```sh
-gp run \
+grp run \
   --tests-repo ~/dev/moje-testy \
   --preset litellm --author claude-sonnet-5 \
   --in plan.json --app-url http://localhost:3132 --out run-result.json
 ```
 
-**Wariant C - sam config, bez runu**: `gp run --tests-repo <p> --init-only [--preset <p>]`
+**Wariant C - sam config, bez runu**: `grp run --tests-repo <p> --init-only [--preset <p>]`
 (wymaga ISTNIEJĄCEGO repo git - inaczej exit 2), potem `run --config`.
 
 **Tip - będąc w repo testów**: z wygenerowanym `greenproof.config.mjs` w cwd
@@ -108,7 +108,7 @@ autodetekcja configu sama go znajdzie, więc najkrótsza forma runu to po
 prostu:
 
 ```sh
-gp run --in plan.json --app-url http://localhost:3132
+grp run --in plan.json --app-url http://localhost:3132
 ```
 
 `--tests-repo` bez `--config` to kotwica do `<p>/greenproof.config.mjs` dla
@@ -151,7 +151,7 @@ wrócić do starego zachowania (człowiek klika `accept` per case).
 Przy pierwszym uruchomieniu na nowym endpointcie (brama/mostek) zrób osobno:
 
 ```sh
-gp preflight --config <config>     # ping /v1/messages + wymuszony tool_use
+grp preflight --config <config>     # ping /v1/messages + wymuszony tool_use
 ```
 
 Exit 0 = endpoint zdatny. Exit 2 = nie odpalaj autora.
@@ -178,10 +178,10 @@ W skryptach: `run`/`author`/`retry` toleruj `3`, `release` toleruj `5`.
   `github`, `json` (NDJSON), `off`.
   W tle/logach używaj `plain`.
 - `GREENPROOF_DEBUG=1` - logi debug na stderr.
-- Post-hoc rollup: `gp status --config <c> --run <runId>` → pole
+- Post-hoc rollup: `grp status --config <c> --run <runId>` → pole
   `summary` (`total/done/remaining/passed/failed/skipped/costUsd/turns`
   + `byStatus`).
-- Per-case liczby z ledgerów: `gp status --cases --config <c> --run <runId>`
+- Per-case liczby z ledgerów: `grp status --cases --config <c> --run <runId>`
   (próby, tury, runy playwright, koszt, reużyte POM-y, powód blokady) - patrz
   `skills/greenproof-operator.md` §4.
 
@@ -192,7 +192,7 @@ Trzy kroki, od najtańszego. Szersza wersja (z drabinką decyzji per
 
 ```sh
 # 1) rollup + statusy per case (czysty odczyt, zawsze exit 0)
-gp status --config configs/<preset>.config.mjs \
+grp status --config configs/<preset>.config.mjs \
   --tests-repo <repo> --run <runId>          # pole summary + cases[<caseId>]
 
 # 2) ostatni wpis ledgera case'a - TU jest powód porażki
@@ -209,7 +209,7 @@ ls <repo>/.greenproof-runs/<runId>/<caseId>/attempt-1/pw-runs/   # run-NN-<purpo
 Stan przebiegu na dysku: `$BASE/state/<runId>.json` (`baseDir` z
 `platformOptions` w configu).
 
-Skrót diagnozy: `blocked(fixture-gap)` → `gp fixture`, potem `author`
+Skrót diagnozy: `blocked(fixture-gap)` → `grp fixture`, potem `author`
 na ten case (§8);
 `blocked(time|turns|budget|playwright-runs)` → podbij cap w configu i/lub retry
 z uwagami; `blocked(infra)` → napraw bramę/mostek/appkę, potem retry;
@@ -227,7 +227,7 @@ cat > retry-in.json <<'JSON'
   "notes": "co poszło źle i czego NIE powtarzać (konkretnie)" }
 JSON
 
-gp retry --config configs/<preset>.config.mjs \
+grp retry --config configs/<preset>.config.mjs \
   --tests-repo <repo> --in retry-in.json --out retry-out.json
 ```
 
@@ -240,13 +240,13 @@ gp retry --config configs/<preset>.config.mjs \
 - Auto-retry z `caps.maxAutoRetries` już się wydarzył w runie - to jest kolejna,
   ręczna próba.
 - `retry` działa na case'ie `blocked`/`attempt_failed`/`failed`/`in_review`.
-  Po udanym `gp fixture` case jest już w `triaged` (z gotową wskazówką
+  Po udanym `grp fixture` case jest już w `triaged` (z gotową wskazówką
   od fixture'a) - wtedy NIE `retry` (exit 1), tylko:
 
 ```sh
 echo '{"runId":"<runId>","caseIds":["<caseId>"]}' > author-in.json
-gp step author --config <c> --tests-repo <repo> --in author-in.json
-gp step deliver --config <c> --tests-repo <repo> --run <runId>
+grp step author --config <c> --tests-repo <repo> --in author-in.json
+grp step deliver --config <c> --tests-repo <repo> --run <runId>
 ```
 
 Pipeline sam akceptuje case'y spełniające kryterium (dowód `valid` + czysty
@@ -260,15 +260,15 @@ na KAŻDY niedomknięty case.
 ```sh
 # accept (RĘCZNE narzędzie: case, którego pipeline nie przyjął; WYMAGA ZGODY)
 echo '{"runId":"<runId>","caseId":"<caseId>","targetBranch":"main"}' > accept-in.json
-gp accept --config <c> --in accept-in.json
+grp accept --config <c> --in accept-in.json
 
 # release: bramki jakości (WYMAGA ZGODY CZŁOWIEKA); waiver tylko dla P1
 echo '{"runId":"<runId>","waivers":[{"caseId":"<caseId>","reason":"<powód>"}]}' > release-in.json
-gp release --config <c> --in release-in.json
+grp release --config <c> --in release-in.json
 
 # clean: sprzątanie PO released (dry-run najpierw!)
 echo '{"runId":"<runId>","dryRun":true}' > clean-in.json
-gp clean --config <c> --in clean-in.json
+grp clean --config <c> --in clean-in.json
 ```
 
 ## 9. Typowe błędy i ich przyczyny

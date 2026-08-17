@@ -48,7 +48,7 @@ export function isCommandName(value: string): value is CommandName {
   return (COMMAND_NAMES as readonly string[]).includes(value);
 }
 
-/** Kroki pipeline'u dostępne pod `gp step <krok>`. */
+/** Kroki pipeline'u dostępne pod `grp step <krok>`. */
 export const STEP_NAMES = ['filter', 'triage', 'author', 'deliver'] as const;
 
 export type StepName = (typeof STEP_NAMES)[number];

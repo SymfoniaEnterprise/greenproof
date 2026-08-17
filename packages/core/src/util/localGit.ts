@@ -156,7 +156,7 @@ function sample(paths: string[], limit = 20): string {
  * commitu case'a. To jedyna operacja, która może ZNISZCZYĆ cudzą pracę, więc
  * odmawiamy startu, zamiast ratować się po fakcie.
  *
- * Pliki NIEŚLEDZONE tylko ostrzegają: w domyślnym `gp run --tests-repo` adapter
+ * Pliki NIEŚLEDZONE tylko ostrzegają: w domyślnym `grp run --tests-repo` adapter
  * fs trzyma swoje `state/`, `artifacts/`, `reports/` w repo testów, więc twarda
  * bramka na nieśledzonych odmawiałaby startu KAŻDEMU przebiegowi. Checkout ich
  * nie rusza (a kolizję z plikiem z brancha git i tak zgłasza sam).

@@ -29,11 +29,11 @@ kontrakty.
 
 ```sh
 pnpm install
-pnpm setup-cli      # udostępnia komendy gp i greenproof
-gp --version
+pnpm setup-cli      # udostępnia komendy grp i greenproof
+grp --version
 ```
 
-Po zmianach w `packages/*/src`: `pnpm build`. `greenproof` jest pełnym aliasem `gp`.
+Po zmianach w `packages/*/src`: `pnpm build`. `greenproof` jest pełnym aliasem `grp`.
 
 Biblioteka powstała na Linuksie (Fedora) i Linux to środowisko pierwszego
 wyboru. Windows jest wspierany natywnie (cmd/PowerShell, bez WSL)
@@ -51,29 +51,6 @@ linijkę do dopisania.
 
 </details>
 
-### Windows: w PowerShellu nie wołaj `gp`
-
-`gp` to **wbudowany alias `Get-ItemProperty`**, a aliasy mają w PowerShellu
-pierwszeństwo przed komendami z PATH. `gp --version` nie uruchomi więc CLI,
-tylko cmdlet - z mylącym komunikatem w rodzaju
-`Cannot find path 'C:\...\--version' because it does not exist.`. W PowerShellu
-używaj pełnej nazwy `greenproof`:
-
-```powershell
-greenproof run --tests-repo C:\moje-testy
-```
-
-Jeśli chcesz odzyskać krótkie `gp`, zdejmij alias raz na stałe w swoim profilu
-(`notepad $PROFILE`):
-
-```powershell
-Remove-Item Alias:gp -Force
-```
-
-W `cmd.exe` problemu nie ma - tam `gp` trafia w `gp.cmd` przez PATHEXT. Cała
-dokumentacja i skille piszą `gp ...` w formie uniwersalnej; na Windowsie w
-PowerShellu czytaj to jako `greenproof ...`.
-
 ## 1. Wprowadzenie i szybki start
 
 greenproof zamienia plan testów E2E w realne specy Playwright: agent-autor
@@ -89,7 +66,7 @@ których dowód nie rozstrzygnął.
 > **Najprostsza droga do pierwszego przebiegu.** Asystent AI prowadzi wywiad
 > onboardingowy (repo testów, aplikacja, platforma, provider, model, token,
 > plan testów), generuje config, uruchamia preflight i podaje gotową komendę
-> `gp run` - ty tylko odpowiadasz na pytania i zatwierdzasz. Jak zacząć:
+> `grp run` - ty tylko odpowiadasz na pytania i zatwierdzasz. Jak zacząć:
 >
 > - **Claude Code** - wpisz `/greenproof-start`.
 > - **Inny asystent** - poproś po prostu o skonfigurowanie greenproof.
@@ -225,8 +202,8 @@ Bugi, problemy napotkane w runach i wnioski (plus monitoring i efforty):
 ## 3. Pipeline i komendy
 
 > **Tych komend zwykle nie wołasz ręcznie.** Cały pipeline poniżej odpalają za Ciebie
-> automatycznie: `gp run` w CLI (jeden proces), a w CI i GitHub Actions - kolejne
-> `gp step <krok>` wywoływane sekwencyjnie. Po pojedyncze komendy sięgasz tylko wtedy,
+> automatycznie: `grp run` w CLI (jeden proces), a w CI i GitHub Actions - kolejne
+> `grp step <krok>` wywoływane sekwencyjnie. Po pojedyncze komendy sięgasz tylko wtedy,
 > gdy masz taką potrzebę (diagnostyka, ponowienie). Konfigurację wstępną również
 > przeprowadza asystent AI (skill `greenproof-start`) w rozmowie - nie wpisujesz
 > komend samodzielnie, prowadzi Cię pytaniami i uruchamia je za Ciebie (za Twoją zgodą).
@@ -237,9 +214,9 @@ filter → triage → author → [dowód mutacyjny] → deliver → auto-accept 
 
 Każdy krok ma osobny JSON wejścia/wyjścia (schematy w
 `packages/core/src/schemas/io.ts`) i daje się odpalić samodzielnie przez
-`gp step <krok>` - job CI wywołuje je sekwencyjnie, a kody wyjścia sterują
+`grp step <krok>` - job CI wywołuje je sekwencyjnie, a kody wyjścia sterują
 przepływem (tabela: [docs/configuration.md](docs/configuration.md), sekcja
-„Kody wyjścia"). `gp run` robi to samo w jednym procesie.
+„Kody wyjścia"). `grp run` robi to samo w jednym procesie.
 
 - **filter** - wybiera case'y E2E z planu, odsiewa już pokryte, liczy dynamiczny
   `timeoutMinutes` partii, melduje roster. Deterministyczny, idempotentny.
@@ -272,7 +249,7 @@ przepływem (tabela: [docs/configuration.md](docs/configuration.md), sekcja
 
 ### Komendy
 
-Każda komenda: `gp <komenda> --config <ścieżka> [--run <runId>] [--in <in.json>] [--out <out.json>]`.
+Każda komenda: `grp <komenda> --config <ścieżka> [--run <runId>] [--in <in.json>] [--out <out.json>]`.
 Stdout = wyłącznie JSON wyniku, stderr = logi. Kolumna „Wejście" nazywa schemat
 z `packages/core/src/schemas/io.ts`; `-` = komenda nie czyta `--in`.
 
@@ -314,10 +291,10 @@ Presety providerów, flagi, wejście komend i zmienne środowiskowe:
 [docs/configuration.md](docs/configuration.md). Pole po polu, co znaczy każde
 ustawienie w configu: [docs/config-reference.md](docs/config-reference.md).
 
-- `gp run --tests-repo <p> --init-only [--preset codex-sub|litellm|claude-sub]` -
+- `grp run --tests-repo <p> --init-only [--preset codex-sub|litellm|claude-sub]` -
   generuje config; każde pole modelu nadpiszesz flagą (`--author`,
   `--base-url`, `--token-env`, `--fixture-author <model>|none`).
-- `gp run` - preflight → filter → triage → fixture → author → deliver →
+- `grp run` - preflight → filter → triage → fixture → author → deliver →
   auto-accept w jednym procesie; `release` to osobna, świadoma decyzja
   człowieka (auto-akceptację wyłączysz flagą `--no-auto-accept` albo
   `gates.autoAccept: false`).
@@ -350,8 +327,8 @@ niezależnie od zdarzeń - stoi tylko wtedy, gdy proces naprawdę stanął.
 
 ## 5. Użycie CI
 
-Na serwerze CI kroki pipeline'u odpalasz jako osobne zadania (`gp step filter`,
-`gp step triage`, `gp step author`, `gp step deliver`) - każde czyta JSON
+Na serwerze CI kroki pipeline'u odpalasz jako osobne zadania (`grp step filter`,
+`grp step triage`, `grp step author`, `grp step deliver`) - każde czyta JSON
 poprzedniego, a kod wyjścia mówi zadaniu, co dalej. Rozbicie na osobne zadania
 ma jeden konkretny powód: `filter` liczy dynamiczny `timeoutMinutes` partii,
 który musi trafić do limitu czasu zadania autora, zanim ono wystartuje.
@@ -382,7 +359,7 @@ per case w Job Summary.
 Silnik autora wymaga dowolnego endpointu w formacie Anthropic (`/v1/messages`).
 Modele z subskrypcji wchodzą przez lokalne mostki OAuth →
 endpoint, np. **CLIProxyAPI**. Przed pierwszym runem obowiązkowy
-`gp preflight`. Pełny opis: [docs/model-bridges.md](docs/model-bridges.md).
+`grp preflight`. Pełny opis: [docs/model-bridges.md](docs/model-bridges.md).
 
 - **CLIProxyAPI** - modele z subskrypcji przez `http://127.0.0.1:<port>/v1/messages`.
 - **LiteLLM** - budżety kluczy wirtualnych, telemetria, fallbacki; model z bramy
@@ -406,7 +383,7 @@ treść w `skills/*.md`, wskaźniki Claude Code w `.claude/skills/`.
 
 | Kiedy użyć | Skill |
 |---|---|
-| Odpalenie/powtórka/debug przebiegu (`gp run`, flagi, `.env`, kody wyjścia, `status`/`accept`/`release`/`clean`) | [`skills/greenproof-cli.md`](skills/greenproof-cli.md) |
+| Odpalenie/powtórka/debug przebiegu (`grp run`, flagi, `.env`, kody wyjścia, `status`/`accept`/`release`/`clean`) | [`skills/greenproof-cli.md`](skills/greenproof-cli.md) |
 | Interpretacja wyniku runu, retry vs eskalacja fixture, rekomendacja accept/waiver/release, sprzątanie i monitoring | [`skills/greenproof-operator.md`](skills/greenproof-operator.md) |
 | Zmiana modelu/providera, presety, `priceTable`, capy, efforty, tokeny, preflight | [`skills/greenproof-config.md`](skills/greenproof-config.md) |
 

@@ -1,6 +1,6 @@
 /**
  * Plain-text renderer - linie statusu na stderr, bez ANSI (bezpieczne dla CI).
- * Format `[gp HH:MM:SS] …`; eventy `turn` throttlowane do 1/30 s per case,
+ * Format `[grp HH:MM:SS] …`; eventy `turn` throttlowane do 1/30 s per case,
  * zdarzenia kluczowe zawsze.
  */
 import type { ProgressEvent } from '@greenproof/core';
@@ -44,7 +44,7 @@ export function createPlainRenderer(io: RendererIo): ProgressRenderer {
             ? ` · pw ${event.pw.assertUsed}/${event.pw.assertMax}+${event.pw.proofUsed}/${event.pw.proofMax}`
             : '';
           emitLine(
-            `[gp ${ts}] ${event.caseId} próba ${event.attempt} · ${event.phase} · ` +
+            `[grp ${ts}] ${event.caseId} próba ${event.attempt} · ${event.phase} · ` +
               `tura ${event.turns}/${event.maxTurns} · ${fmtCost(event.costUsd)}/${fmtCost(event.maxCostUsd)}${pwPart}`,
           );
           break;
@@ -58,7 +58,7 @@ export function createPlainRenderer(io: RendererIo): ProgressRenderer {
             ? `run ${rollup.done}/${rollup.total} (${rollup.passed}✓ ${rollup.failed}✗)`
             : '';
           emitLine(
-            `[gp ${ts}] ▶ ${event.caseId} próba ${event.attempt} · start${modelPart}` +
+            `[grp ${ts}] ▶ ${event.caseId} próba ${event.attempt} · start${modelPart}` +
               (runPart ? ` · ${runPart}` : ''),
           );
           break;
@@ -73,7 +73,7 @@ export function createPlainRenderer(io: RendererIo): ProgressRenderer {
             ? ` · run ${rollup.done}/${rollup.total} (${rollup.passed}✓ ${rollup.failed}✗)`
             : '';
           emitLine(
-            `[gp ${ts}] ${mark} ${event.caseId} ${event.status}${reasonPart} · ` +
+            `[grp ${ts}] ${mark} ${event.caseId} ${event.status}${reasonPart} · ` +
               `${fmtCost(event.costUsd)} · ${event.turns} tur${runPart}`,
           );
           break;
@@ -82,7 +82,7 @@ export function createPlainRenderer(io: RendererIo): ProgressRenderer {
         case 'playwright-run': {
           const ts = fmtTime(io.now());
           emitLine(
-            `[gp ${ts}] ${event.caseId} playwright #${event.runIndex} (${event.purpose}, pula ${event.pool})` +
+            `[grp ${ts}] ${event.caseId} playwright #${event.runIndex} (${event.purpose}, pula ${event.pool})` +
               ` → ${event.passed} passed / ${event.failed} failed`,
           );
           break;
@@ -92,7 +92,7 @@ export function createPlainRenderer(io: RendererIo): ProgressRenderer {
           const ts = fmtTime(io.now());
           const phaseLabel = event.phase === 'start' ? 'start' : 'koniec';
           const notePart = event.note ? `: ${event.note}` : '';
-          emitLine(`[gp ${ts}] krok ${event.name} - ${phaseLabel}${notePart}`);
+          emitLine(`[grp ${ts}] krok ${event.name} - ${phaseLabel}${notePart}`);
           break;
         }
       }

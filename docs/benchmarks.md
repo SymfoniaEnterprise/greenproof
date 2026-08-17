@@ -318,8 +318,8 @@ pracował na najwyższym działającym wariancie `max`. Fixture-author pozostał
 `gpt-5.6-sol(high)`, ale przed przerwaniem runu nie został wywołany.
 
 Tego przebiegu **nie należy interpretować jako wyniku 2/10**: proces
-`gp step author` został zakończony sygnałem podczas trzeciego case'a, a
-runner zwrócił `gp step author exit null`. Pozostałe case'y nie dostały
+`grp step author` został zakończony sygnałem podczas trzeciego case'a, a
+runner zwrócił `grp step author exit null`. Pozostałe case'y nie dostały
 szansy wykonania.
 
 | Case | Stan w chwili przerwania | Próby | Tury | Runy pw | Koszt est. SDK |
@@ -355,7 +355,7 @@ zamiast Bash-owych runów), ale kanał jest teraz zdatny do sesji agentowych.
 
 ### Run 3 (2026-08-15/16 noc): deepseek(max) i luna(max) - po 8/10, obie porażki = REALNE BUGI APPKI
 
-Pierwsze pełne runy przez jednokomendowy `gp run` (config `configs/…`,
+Pierwsze pełne runy przez jednokomendowy `grp run` (config `configs/…`,
 `--in <plan>` + `--app-url`). Oba modele niezależnie poległy na TEJ SAMEJ parze
 case'ów - i oba miały rację:
 
@@ -497,11 +497,11 @@ Fakty trwałe, niezależne od konkretnej sesji benchmarku:
   `<workdir>/platform/state/<runId>.json`.
 - **Live progress**: stderr harnessu pokazuje postęp sam - w terminalu
   interaktywnym tablica TTY, w unitach systemd/logach linie plain
-  `[gp HH:MM:SS] …` per tura/case/run playwright (throttlowane do jednej linii
+  `[grp HH:MM:SS] …` per tura/case/run playwright (throttlowane do jednej linii
   na ≤30 s), plus linie `[benchmark-path]` dla fixture-eskalacji i ponownych
   prób. Sterowane zmienną `GREENPROOF_PROGRESS` (`auto`/`tty`/`plain`/
   `github`/`json`).
-- **Post-hoc**: `gp status --run <runId>` zwraca pole `summary`
+- **Post-hoc**: `grp status --run <runId>` zwraca pole `summary`
   (done/remaining/passed/failed, koszt, tury) - bez ręcznego grep-owania stanu.
 - **Transcrypty prób**: `<workdir>/<caseId>/attempt-N/messages.jsonl`,
   wersjonowane raporty playwright:

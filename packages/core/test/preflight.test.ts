@@ -93,7 +93,7 @@ describe('preflight', () => {
     const wynik = await runPreflight(makeConfig('<model-z-bramy>'), secrets);
     expect(wynik.ok).toBe(false);
     expect(wynik.ping.error).toMatch(/placeholder/);
-    expect(wynik.ping.error).toMatch(/gp models/);
+    expect(wynik.ping.error).toMatch(/grp models/);
     expect(wynik.ping.latencyMs).toBeUndefined();
   });
 });

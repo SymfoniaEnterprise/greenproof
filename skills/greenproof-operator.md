@@ -7,7 +7,7 @@ Uruchamianie komend: `skills/greenproof-cli.md`. Konfiguracja modeli:
 ## 1. Zasady bezpieczeństwa (nadrzędne)
 
 - **NIE pushuj** do repo testów. Jedyny push to PR akceptacji: robi go
-  `run` (auto-accept) albo ręczna komenda `gp accept`.
+  `run` (auto-accept) albo ręczna komenda `grp accept`.
 - **NIE wołaj `accept`, `release`, `clean --purge` bez wyraźnej zgody
   człowieka.** Agent przygotowuje gotową komendę i rekomendację; klika człowiek.
   Wyjątek: auto-akceptacja w `run` to robota pipeline'u (deterministyczny
@@ -85,7 +85,7 @@ każdy nieudany case na drabince → wystartuj retry (albo napraw przyczynę)**.
 ### 4.1 Zbierz diagnostykę (kolejność od najtańszej)
 
 ```sh
-gp status --config configs/<preset>.config.mjs \
+grp status --config configs/<preset>.config.mjs \
   --tests-repo <repo> --run <runId>          # zawsze exit 0 - to czysty odczyt
 ```
 
@@ -98,7 +98,7 @@ Zanim wejdziesz w ledgery pojedynczych case'ów, zbierz per-case liczby jedną
 komendą (flaga `--cases` na `status` - dawniej osobna komenda `stats`):
 
 ```sh
-gp status --cases --config configs/<preset>.config.mjs \
+grp status --cases --config configs/<preset>.config.mjs \
   --tests-repo <repo> --run <runId>          # per-case rollup z ledgerów, exit 0
 ```
 
@@ -139,7 +139,7 @@ nie na pisaniu testu.
 | Objaw | Interpretacja | Ruch |
 |---|---|---|
 | `attempt_failed` | próba padła (często odrzucony dowód mutacyjny) | `retry` z konkretnymi `notes` - bez uwag powtórzysz ten sam błąd |
-| `blocked` + `fixture-gap` | bezpiecznik seedu: agent nie doprowadził stanu wyjściowego | `gp fixture` (wąska sesja mocniejszego modelu, odbiór deterministyczny - skrypt weryfikacyjny musi wyjść 0), POTEM ponowna sesja autora (uwaga niżej: `author`, nie `retry`); `run` robi obie rzeczy sam |
+| `blocked` + `fixture-gap` | bezpiecznik seedu: agent nie doprowadził stanu wyjściowego | `grp fixture` (wąska sesja mocniejszego modelu, odbiór deterministyczny - skrypt weryfikacyjny musi wyjść 0), POTEM ponowna sesja autora (uwaga niżej: `author`, nie `retry`); `run` robi obie rzeczy sam |
 | `blocked` + `time`/`turns`/`budget`/`playwright-runs` | cap zadziałał | podbij właściwy cap w configu (`caps.maxTimeMinutes`/`maxTurns`/`maxCostUsd`/`maxPlaywrightRuns`) ALBO retry z `notes` - często oba naraz; nie podbijaj capów odruchowo |
 | `blocked` + `infra` | zwis/timeout backendu, watchdog pierwszej tury | napraw infrastrukturę (brama/mostek/appka), potem retry; dla modeli LOKALNYCH podnieś `caps.firstTurnTimeoutMinutes` (~15) - 5 min ubija żywą sesję |
 | `blocked` + `other` z notatką | `deliver` emituje OSOBNY raport `app_defect_suspected` (nie `case_blocked`) - deklaracja agenta, że aplikacja/kontrakt API blokuje flow | werdykt człowieka: zweryfikuj defekt ręcznie. Prawdziwy bug = najcenniejszy wynik testera (zgłoś, nie retryuj na ślepo); wymówka modelu = retry z `notes`. Zacytuj `blockedNote` + `lastErrors` z raportu |
@@ -164,11 +164,11 @@ Eskalacja fixture ręcznie:
 
 ```sh
 echo '{"runId":"<runId>","caseId":"<caseId>"}' > fx.json
-gp fixture --config <c> --in fx.json            # exit 3 = nie udało się
+grp fixture --config <c> --in fx.json            # exit 3 = nie udało się
 
 # prewencyjnie, przed partią, per churn-prone TYP:
 echo '{"runId":"<runId>","mode":"preventive","types":["lista-plac"]}' > fx-prev.json
-gp fixture --config <c> --in fx-prev.json
+grp fixture --config <c> --in fx-prev.json
 ```
 
 Udany `fixture` SAM cofa case do `triaged`, SAM wpisuje `retryNotes` („użyj
@@ -179,8 +179,8 @@ jak robi to `run`: sesją autora na ten jeden case, potem `deliver`.
 
 ```sh
 echo '{"runId":"<runId>","caseIds":["<caseId>"]}' > au.json
-gp step author --config <c> --tests-repo <repo> --in au.json  # exit 3 = dalej nieudany
-gp step deliver --config <c> --tests-repo <repo> --run <runId>
+grp step author --config <c> --tests-repo <repo> --in au.json  # exit 3 = dalej nieudany
+grp step deliver --config <c> --tests-repo <repo> --run <runId>
 ```
 
 (Pomoc CLI przy komendzie `fixture` mówi „potem zwykłe retry" - to skrót
@@ -200,7 +200,7 @@ cat > retry.json <<'JSON'
 }
 JSON
 
-gp retry --config configs/<preset>.config.mjs \
+grp retry --config configs/<preset>.config.mjs \
   --tests-repo <repo> --in retry.json --out wynik.json
 ```
 
@@ -277,7 +277,7 @@ eksploruj od nowa, od razu dwa konteksty i konflikt wersji" plus rozważenie
 
 ```sh
 echo '{"runId":"<runId>","dryRun":true}' > clean-in.json   # ZAWSZE najpierw dry-run
-gp clean --config <c> --in clean-in.json
+grp clean --config <c> --in clean-in.json
 ```
 
 - Domyślnie usuwa transcripty, kontekst triażu i extra-inventory case'ów
@@ -301,7 +301,7 @@ Komenda do wklejenia przez użytkownika - zwykły pierwszy plan, żeby widział
 tablicę postępu:
 
 ```sh
-gp run --config <c> --in <plan.json> --app-url <url> --out /tmp/gp-run.json
+grp run --config <c> --in <plan.json> --app-url <url> --out /tmp/gp-run.json
 ```
 
 Gdy run ma przeżyć zamknięcie terminala, użytkownik owija go sam:
@@ -309,7 +309,7 @@ Gdy run ma przeżyć zamknięcie terminala, użytkownik owija go sam:
 ```sh
 systemd-run --user --unit=gp-run --collect \
   --setenv=GREENPROOF_PROGRESS=plain \
-  bash -lc 'gp run --config <c> --in <plan.json> --app-url <url> \
+  bash -lc 'grp run --config <c> --in <plan.json> --app-url <url> \
             --out /tmp/gp-run.json > /tmp/gp-run.stdout 2> /tmp/gp-run.log'
 
 journalctl --user -u gp-run -f          # albo: tail -f /tmp/gp-run.log
@@ -318,7 +318,7 @@ journalctl --user -u gp-run -f          # albo: tail -f /tmp/gp-run.log
 Agent w trakcie runu czyta stan z PLIKÓW, nie ze stdout procesu:
 
 ```sh
-gp status --config <c> --run <runId>    # rollup w dowolnym momencie
+grp status --config <c> --run <runId>    # rollup w dowolnym momencie
 ```
 
 - `GREENPROOF_PROGRESS=plain` w tle (tablica TTY jest nieczytelna w logach);

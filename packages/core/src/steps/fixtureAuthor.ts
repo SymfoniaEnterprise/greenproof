@@ -172,7 +172,7 @@ export async function runFixtureAuthor(
 ): Promise<FixtureResult> {
   const runner = params.sessionRunner ?? runFixtureSession;
   // Ten krok też przełącza branche i robi `git add -A`. W ścieżce eskalacji
-  // stoi za bramką autora, ale `gp fixture --case <id>` wywołane wprost
+  // stoi za bramką autora, ale `grp fixture --case <id>` wywołane wprost
   // startuje bez niej - i bez tego sprawdzenia zamiatałoby cudzą pracę.
   await assertTestsRepoClean(config.paths.testsRepoDir, ports.logger);
   const planBuf = await ports.artifacts.get(params.runId, PLAN_ARTIFACT_KEY);

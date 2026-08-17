@@ -83,7 +83,7 @@ function hasAnyContent(json: unknown): boolean {
 
 /**
  * Preset bramy nie zna nazwy modelu - aliasy w LiteLLM są instalacyjne, więc
- * `gp run --init-only --preset litellm` zapisuje placeholder `<model-z-bramy>`.
+ * `grp run --init-only --preset litellm` zapisuje placeholder `<model-z-bramy>`.
  * Bez tej bramki run szedłby do bramy z dosłownym „<model-z-bramy>" i wracał
  * z surowym 400/404, po którym nie widać, że wystarczy uzupełnić jedno pole.
  */
@@ -108,7 +108,7 @@ export async function runPreflight(
   if (PLACEHOLDER_RE.test(config.model.author.trim())) {
     const err =
       `Model autora to niewypełniony placeholder "${config.model.author}". ` +
-      'Wpisz nazwę modelu ze SWOJEJ bramy: `gp models` wypisze dostępne, ' +
+      'Wpisz nazwę modelu ze SWOJEJ bramy: `grp models` wypisze dostępne, ' +
       'potem ustaw ją w `model.author` w configu albo podaj flagą --author. ' +
       'Pamiętaj też o wpisie w `priceTable` pod tą nazwą - bez niego capy kosztowe nie gryzą.';
     result.ping = { ok: false, error: err };

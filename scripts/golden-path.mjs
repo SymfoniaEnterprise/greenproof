@@ -22,7 +22,7 @@ const execFileP = promisify(execFile);
 /**
  * Aliasy modeli w bramie LiteLLM są INSTALACYJNE - u każdego nazywają się
  * inaczej, więc nazwy naszych wpisów nie mają czego robić w skrypcie. Ustaw
- * raz w środowisku (np. w ~/.bashrc), nazwy podejrzysz przez `gp models`:
+ * raz w środowisku (np. w ~/.bashrc), nazwy podejrzysz przez `grp models`:
  *   GP_FIXTURE_MODEL - model eskalacji fixture przez bramę
  *   GP_GLM_MODEL     - wpis GLM 5.2 przez bramę
  */

@@ -1,6 +1,6 @@
 // Gotowy config: API ANTHROPIC wprost (bez bramy i mostków).
 // Użycie:
-//   gp run --config configs/claude.config.mjs \
+//   grp run --config configs/claude.config.mjs \
 //     --in <plan.json> --app-url http://localhost:3132
 // Token: configs/.env z linią `ANTHROPIC_AUTH_TOKEN=...` albo zmienna
 // środowiskowa. (Wariant subskrypcyjny: sesje SDK potrafią użyć poświadczeń

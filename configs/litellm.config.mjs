@@ -1,6 +1,6 @@
 // Gotowy config: BRAMA LITELLM (https://ai-proxy.szybkafaktura.pl).
 // Użycie:
-//   gp run --config configs/litellm.config.mjs \
+//   grp run --config configs/litellm.config.mjs \
 //     --in <plan.json> --app-url http://localhost:3132
 // Token: plik configs/.env z linią `LITELLM_KEY=...` (CLI wczyta sam)
 // albo zmienna środowiskowa. Repo testów: GREENPROOF_TESTS_REPO w env,
@@ -26,7 +26,7 @@ export default {
     baseUrl: 'https://ai-proxy.szybkafaktura.pl',
     authTokenEnv: 'LITELLM_KEY',
     costModel: 'metered',
-    // ── TU ZMIENIASZ MODEL ── nazwy to aliasy z bramy (lista: `gp models`).
+    // ── TU ZMIENIASZ MODEL ── nazwy to aliasy z bramy (lista: `grp models`).
     author: 'claude-sonnet-5',
     // Eskalacja dziedziczy endpoint i token autora (ta sama brama).
     fixtureAuthor: { model: 'claude-opus-5' },

@@ -7,7 +7,7 @@
  *
  * OSOBNY krok, nie rozszerzenie delivera: deliver melduje drafty i blokady
  * człowiekowi, akceptacja to odrębna faza wywoływana TYLKO z `run` (retry i
- * `gp step deliver` nie auto-akceptują). `accept` zostaje ręcznym narzędziem.
+ * `grp step deliver` nie auto-akceptują). `accept` zostaje ręcznym narzędziem.
  *
  * Reużycie `runAccept` (nie duplikacja): otwarcie PR, bump reuse i promocja
  * ui-traps zostają tam, gdzie są. Awaria jednego case'a jest logowana i NIE
