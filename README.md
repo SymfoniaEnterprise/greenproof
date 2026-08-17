@@ -85,13 +85,14 @@ których dowód nie rozstrzygnął.
 
 ### Zacznij tutaj: konfiguracja z asystentem AI
 
-Najprostsza droga do pierwszego przebiegu. Asystent AI prowadzi wywiad
-onboardingowy (repo testów, aplikacja, platforma, provider, model, token,
-plan testów), generuje config, uruchamia preflight i podaje gotową komendę
-`gp run` - ty tylko odpowiadasz na pytania i zatwierdzasz. Jak zacząć:
-
-- **Claude Code** - wpisz `/greenproof-start`.
-- **Inny asystent** - poproś po prostu o skonfigurowanie greenproof.
+> [!TIP]
+> **Najprostsza droga do pierwszego przebiegu.** Asystent AI prowadzi wywiad
+> onboardingowy (repo testów, aplikacja, platforma, provider, model, token,
+> plan testów), generuje config, uruchamia preflight i podaje gotową komendę
+> `gp run` - ty tylko odpowiadasz na pytania i zatwierdzasz. Jak zacząć:
+>
+> - **Claude Code** - wpisz `/greenproof-start`.
+> - **Inny asystent** - poproś po prostu o skonfigurowanie greenproof.
 
 Przewodnik skilla: [`skills/greenproof-start.md`](skills/greenproof-start.md).
 
@@ -218,7 +219,8 @@ produkuje „zieleni na skróty", tylko potrzebuje na nią więcej czasu GPU.
 **Wzorzec:** mocny model płaci za odkrycie raz (run prewencyjny $0,19-0,86,
 ratunkowy $1,14-1,30), tani autor dowozi resztę - a dowód mutacyjny odsiewa
 fałszywą zieleń niezależnie od modelu.
-Pełna historia runów, metodyka i monitoring: [docs/benchmarks.md](docs/benchmarks.md).
+Bugi, problemy napotkane w runach i wnioski (plus monitoring i efforty):
+[docs/benchmarks.md](docs/benchmarks.md).
 
 ## 3. Pipeline i komendy
 
