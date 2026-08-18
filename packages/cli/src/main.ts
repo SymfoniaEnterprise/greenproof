@@ -192,19 +192,19 @@ export function parseArgs(argv: string[]): ParsedArgs {
 }
 
 export function helpText(): string {
-  return `gp - cienki CLI nad @greenproof/core (I/O przez pliki JSON).
-\`greenproof\` pozostaje pełnym aliasem \`gp\` - obie nazwy są wymienne.
+  return `grp - cienki CLI nad @greenproof/core (I/O przez pliki JSON).
+\`greenproof\` pozostaje pełnym aliasem \`grp\` - obie nazwy są wymienne.
 
 UŻYCIE
-  gp <komenda> --config <ścieżka> [--run <runId>] [--in <in.json>] [--out <out.json>]
-  gp run --tests-repo <ścieżka> --init-only [--preset codex-sub|litellm|claude-sub]
+  grp <komenda> --config <ścieżka> [--run <runId>] [--in <in.json>] [--out <out.json>]
+  grp run --tests-repo <ścieżka> --init-only [--preset codex-sub|litellm|claude-sub]
                  [--config <output.mjs>] [--author <model>] [--base-url <url>]
                  [--token-env <ENV>] [--fixture-author <model>|auto|none] [--force]
-  gp run (--config <gotowy config> | --tests-repo <dir> [--preset …] [--author …])
+  grp run (--config <gotowy config> | --tests-repo <dir> [--preset …] [--author …])
                  --in <filter-input.json | plan> [--app-url <url>] [--out <result.json>]
-  gp step filter|triage|author|deliver [--config <ścieżka>] [--in <in.json>] [--out <out.json>]
-  gp knowledge init|lint --config <ścieżka>
-  gp preflight --config <ścieżka>
+  grp step filter|triage|author|deliver [--config <ścieżka>] [--in <in.json>] [--out <out.json>]
+  grp knowledge init|lint --config <ścieżka>
+  grp preflight --config <ścieżka>
 
 KOMENDY
   step       Jeden krok pipeline'u jako osobny job (platformy/CI odpalają każdy
@@ -369,7 +369,7 @@ export async function run(argv: string[], options: RunOptions = {}): Promise<num
   try {
     const migrated = STEP_COMMAND_MIGRATIONS[command];
     if (migrated !== undefined) {
-      throw new CliError(`Komenda \`${command}\` została przeniesiona: użyj \`gp ${migrated}\`.`);
+      throw new CliError(`Komenda \`${command}\` została przeniesiona: użyj \`grp ${migrated}\`.`);
     }
     if (!isCommandName(command)) {
       throw new CliError(`Nieznana komenda: ${command}. Użyj --help.`);
@@ -454,7 +454,7 @@ async function dispatch(
   // --cases dokłada per-case rollup wyłącznie do statusu (dawna komenda stats).
   if (effective !== 'status' && args.cases) {
     throw new CliError(
-      'Flaga --cases jest dostępna wyłącznie dla komendy status (użyj: gp status --cases).',
+      'Flaga --cases jest dostępna wyłącznie dla komendy status (użyj: grp status --cases).',
     );
   }
 
@@ -466,7 +466,7 @@ async function dispatch(
   }
 
   if (effective !== 'run' && args.initOnly) {
-    throw new CliError('Flaga --init-only jest dostępna wyłącznie dla komendy run (użyj: gp run --tests-repo <p> --init-only).');
+    throw new CliError('Flaga --init-only jest dostępna wyłącznie dla komendy run (użyj: grp run --tests-repo <p> --init-only).');
   }
 
   if (effective === 'run' && args.initOnly) {
@@ -728,7 +728,7 @@ async function resolveConfigPath(
     }
     throw new CliError(
       `W repo testów ${repoDir} nie ma pliku greenproof.config.mjs. ` +
-        `Wygeneruj go (gp run --tests-repo ${args.testsRepo} --init-only) ` +
+        `Wygeneruj go (grp run --tests-repo ${args.testsRepo} --init-only) ` +
         `albo wskaż gotowy config jawnie (--config <ścieżka>).`,
     );
   }

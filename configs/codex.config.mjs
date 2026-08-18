@@ -1,6 +1,6 @@
 // Gotowy config: SUBSKRYPCJA CODEX przez mostek CLIProxyAPI (http://127.0.0.1:8317).
 // Użycie:
-//   gp run --config configs/codex.config.mjs \
+//   grp run --config configs/codex.config.mjs \
 //     --in <plan.json> --app-url http://localhost:3132
 // Token: configs/.env z linią `CLIPROXY_TOKEN=...` (klucz z ~/.config/cliproxyapi/config.yaml)
 // albo zmienna środowiskowa. Repo testów: GREENPROOF_TESTS_REPO w env,

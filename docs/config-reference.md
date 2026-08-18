@@ -318,7 +318,7 @@ interface KnowledgeConfig {
 W katalogu oczekiwane pliki (YAML):
 
 - `ui-traps.yaml` - pułapki UI per komponent/flow. Schemat
-  `UiTrapsSchema` walidowany przez `gp knowledge lint`.
+  `UiTrapsSchema` walidowany przez `grp knowledge lint`.
   Pusta lista (`traps: []`) jest poprawna.
 - `app-map.yaml` - mapa tras: route, navigationSteps, keySelectors.
   Pusta lista (`views: []`) jest poprawna.
@@ -327,9 +327,9 @@ W katalogu oczekiwane pliki (YAML):
 
 Brak sekcji `knowledge` = projekt bez wiedzy działa, tylko drożej
 (agent odkrywa od zera zamiast reużyć `app-map` i `ui-traps`). Komenda
-`gp knowledge init` tworzy szablony (istniejących plików NIE nadpisuje - zapis
+`grp knowledge init` tworzy szablony (istniejących plików NIE nadpisuje - zapis
 idzie flagą `wx`, więc nawet wyścig dwóch jobów nie skasuje wiedzy);
-`gp knowledge lint` waliduje i wykrywa duplikaty (`component::trap`, `route`).
+`grp knowledge lint` waliduje i wykrywa duplikaty (`component::trap`, `route`).
 
 ### `oracle` - golden-case'y (opcjonalne)
 

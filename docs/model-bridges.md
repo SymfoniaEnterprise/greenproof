@@ -79,7 +79,7 @@ api-keys:
 `api-keys` to WŁASNY token dostępowy do mostka (nie ma nic wspólnego z kontem
 mostka) - zweryfikowano lokalnie, że akceptowany jest zarówno nagłówek
 `Authorization: Bearer <token>`, jak i `x-api-key: <token>` (ten drugi jest
-tym, którego używa `gp preflight` i silnik autora, patrz niżej).
+tym, którego używa `grp preflight` i silnik autora, patrz niżej).
 
 ### 2. Logowanie subskrypcji (OAuth)
 
@@ -154,7 +154,7 @@ Potem OBOWIĄZKOWO preflight greenproof - co robi i co oznacza exit 2:
 sekcja „OBOWIĄZKOWY preflight" niżej.
 
 ```sh
-gp preflight --config greenproof.config.mjs
+grp preflight --config greenproof.config.mjs
 ```
 
 ### 4a. Wybór reasoning effort (zweryfikowane na v7.2.132)
@@ -214,7 +214,7 @@ const MODELS = {
 ```
 
 Użycie: `CLIPROXY_TOKEN=<WŁASNY-DŁUGI-TOKEN> node scripts/golden-path.mjs --model cliproxy`
-- pamiętaj o `gp preflight` PRZED pierwszym runem golden-path na tym
+- pamiętaj o `grp preflight` PRZED pierwszym runem golden-path na tym
 modelu.
 
 ## Konfiguracja greenproof
@@ -235,7 +235,7 @@ export default {
 ## OBOWIĄZKOWY preflight przed pierwszym runem
 
 ```sh
-gp preflight --config greenproof.config.mjs
+grp preflight --config greenproof.config.mjs
 ```
 
 Komenda robi dwie rzeczy i zwraca exit 2, jeśli którakolwiek zawiedzie

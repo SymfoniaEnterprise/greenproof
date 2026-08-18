@@ -123,7 +123,7 @@ interface PresetFixtureAuthor {
  * Nazwa modelu autora w bramie LiteLLM jest INSTALACYJNA - każdy nazywa swoje
  * wpisy po swojemu, więc preset nie ma czego zgadywać. Zamiast wpisywać tu
  * alias z naszej bramy (i skazywać obcą instalację na „model not found"),
- * zostawiamy placeholder: `gp models` wypisze realne nazwy, a preflight
+ * zostawiamy placeholder: `grp models` wypisze realne nazwy, a preflight
  * przerywa z konkretną instrukcją, gdy ktoś odpali run bez wypełnienia.
  * Presety subskrypcyjne placeholdera nie potrzebują - tam nazwy modeli
  * narzuca mostek i są takie same u wszystkich.
@@ -173,7 +173,7 @@ const INIT_PRESETS: Record<string, InitPreset> = {
   },
   litellm: {
     label:
-      'Brama LiteLLM (127.0.0.1:4000): model autora WŁASNY (podaj --author, nazwy z `gp models`) + eskalacja claude-sonnet-5 (brama)',
+      'Brama LiteLLM (127.0.0.1:4000): model autora WŁASNY (podaj --author, nazwy z `grp models`) + eskalacja claude-sonnet-5 (brama)',
     baseUrl: 'http://127.0.0.1:4000',
     tokenEnv: 'LITELLM_KEY',
     author: MODEL_PLACEHOLDER,
@@ -831,7 +831,7 @@ export async function cmdDeliver(args: CommandArgs, opts?: { autoAccept?: boolea
 export interface StatusOutput extends PipelineState {
   /** Rollup liczników (done/remaining/passed/failed/koszt) - wsad dla CI i ludzi. */
   summary: RunRollup;
-  /** Wersja aplikacji (ta sama co `gp --version`). */
+  /** Wersja aplikacji (ta sama co `grp --version`). */
   version: string;
 }
 

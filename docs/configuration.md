@@ -11,7 +11,7 @@ zmieniasz - reszta pól dostaje wartości domyślne ze schematu.
 
 ## Szybki start: `run --init-only` + `run`
 
-Config generuje `gp run --tests-repo <p> --init-only` wprost z repozytorium
+Config generuje `grp run --tests-repo <p> --init-only` wprost z repozytorium
 testów (musi istnieć katalog `.git`). `--tests-repo` wskazuje **repo testów** -
 miejsce, w którym greenproof zapisuje testy. Testowana aplikacja to co innego:
 podajesz ją przez `--app-url`.
@@ -25,17 +25,17 @@ provider+model nie wymaga ręcznej edycji pliku:
 instalacyjne - u każdego wpisy nazywają się inaczej - więc preset nie zgaduje
 i zapisuje placeholder `<model-z-bramy>`. Dopóki tam zostaje, preflight
 przerywa run z instrukcją zamiast wysyłać do bramy nieistniejącą nazwę. Listę
-realnych nazw daje `gp models`. Presety subskrypcyjne placeholdera nie mają:
+realnych nazw daje `grp models`. Presety subskrypcyjne placeholdera nie mają:
 tam nazwy narzuca mostek i są takie same u wszystkich.
 
 ```sh
 # Preset bez zmian (token w env wg presetu: CLIPROXY_TOKEN / LITELLM_KEY / ANTHROPIC_AUTH_TOKEN):
-gp models --config <config>        # najpierw sprawdź, co wystawia TWOJA brama
-gp run --tests-repo /ścieżka/do/repo-z-testami --init-only --preset litellm \
+grp models --config <config>        # najpierw sprawdź, co wystawia TWOJA brama
+grp run --tests-repo /ścieżka/do/repo-z-testami --init-only --preset litellm \
   --author <nazwa-z-listy-wyżej>
 
 # Ten sam preset, inny model autora i eskalacja wyłączona:
-gp run --tests-repo /ścieżka/do/repo-z-testami --init-only --preset litellm \
+grp run --tests-repo /ścieżka/do/repo-z-testami --init-only --preset litellm \
   --author gemini-3.7-openrouter --fixture-author none
 ```
 
@@ -61,12 +61,12 @@ warianty - gotowy config z repo ALBO customizacja od zera:
 # Wariant A: gotowy config (configs/litellm|codex|claude.config.mjs - model
 # w jednym oznaczonym miejscu, token w configs/.env). --tests-repo wskazuje
 # repo testów, bo gotowe configi nie mają go wbitego:
-gp run --config configs/litellm.config.mjs \
+grp run --config configs/litellm.config.mjs \
   --tests-repo ~/dev/moje-testy \
   --in plan.json --app-url http://localhost:3132
 
 # Wariant B: od zera - repo testów i config powstają same przy 1. uruchomieniu:
-gp run --preset litellm --author claude-sonnet-5 \
+grp run --preset litellm --author claude-sonnet-5 \
   --tests-repo ~/dev/moje-testy \
   --in plan.json --app-url http://localhost:3132
 ```
@@ -115,7 +115,7 @@ Przykład - retry case'a z uwagami (`retry.json`):
 ```
 
 ```sh
-gp retry --config configs/codex.config.mjs \
+grp retry --config configs/codex.config.mjs \
   --tests-repo ~/dev/moje-testy --in retry.json --out wynik.json
 ```
 
@@ -141,7 +141,7 @@ kroków w CI.
 - `--tests-repo <p>` - repo testów do przebiegu. Bez `--config` jest kotwicą do
   `<p>/greenproof.config.mjs` dla KAŻDEJ komendy (nie tylko `run`): `run` przy
   braku pliku robi scaffold repo + generowanie configu od zera, pozostałe komendy kończą się
-  błędem z podpowiedzią (`gp run --tests-repo <p> --init-only` albo jawny `--config`). Z `--config` wskazuje,
+  błędem z podpowiedzią (`grp run --tests-repo <p> --init-only` albo jawny `--config`). Z `--config` wskazuje,
   na którym repo działać (ustawia `GREENPROOF_TESTS_REPO`).
 - `run / step filter --in <p>` - JEDYNA flaga wejścia filtra: gotowy `FilterInput`
   JSON ALBO plik planu (JSON albo format parsera wg `plan.source`); plan
@@ -210,7 +210,7 @@ wyniku, więc harnessy i CI niczego nie parsują inaczej.
   stderr będący TTY → `tty`; inaczej `plain`.
 - `tty` - tablica statusu w ramce, odświeżana w miejscu (ANSI, kolory;
   `NO_COLOR` je wyłącza).
-- `plain` - pojedyncze linie `[gp HH:MM:SS] …`: zdarzenia kluczowe zawsze,
+- `plain` - pojedyncze linie `[grp HH:MM:SS] …`: zdarzenia kluczowe zawsze,
   tury throttlowane do jednej linii na 30 s. Bezpieczne dla logów CI.
 - `github` - linie jak `plain` + zwijane grupy `::group::` per case; na końcu
   komendy tabela per case dopisywana do Job Summary (`$GITHUB_STEP_SUMMARY`).

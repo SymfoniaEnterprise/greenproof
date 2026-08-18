@@ -32,32 +32,20 @@ pnpm install --frozen-lockfile
 ```
 
 `pnpm --filter @greenproof/cli build` buduje binarkę `packages/cli/dist/main.js`,
-którą referencyjne workflow wołają jako `pnpm exec gp …`. Jeśli
+którą referencyjne workflow wołają jako `pnpm exec grp …`. Jeśli
 publikujesz CLI jako pakiet (`@greenproof/cli`) i instalujesz w innym
 repo - wystarczy samo `pnpm install`, buildu nie trzeba powtarzać.
-Na runnerze/CI wrapper `gp`/`greenproof` z `pnpm setup-cli` jest zbędny - job
+Na runnerze/CI wrapper `grp`/`greenproof` z `pnpm setup-cli` jest zbędny - job
 woła wprost `node packages/cli/dist/main.js` po `pnpm build` (albo instaluje
 pakiet z rejestru, gdy będzie publikowany). Lokalnie `pnpm setup-cli` działa na
 wszystkich trzech systemach: na Linuksie i macOS zakłada skrypty bashowe w
 `~/.local/bin`, na Windowsie pliki `.cmd` w `%LOCALAPPDATA%\greenproof\bin`
 (cmd.exe znajduje je przez PATHEXT). Wrapper przekazuje kod wyjścia CLI, więc
-`gp step author || [ $? -eq 3 ]` i jego windowsowe odpowiedniki działają tak
+`grp step author || [ $? -eq 3 ]` i jego windowsowe odpowiedniki działają tak
 samo jak wywołanie `node …/main.js`.
 
-**Windows + PowerShell: `gp` jest zajęte.** `gp` to wbudowany alias
-`Get-ItemProperty`, a aliasy mają w PowerShellu pierwszeństwo przed komendami z
-PATH - `gp --version` woła cmdlet i kończy się
-`Cannot find path '…\--version' because it does not exist.`. Dotyczy to każdego
-kroku `shell: pwsh` (domyślna powłoka runnerów `windows-*`) i każdego
-użytkownika przy terminalu. Wołaj `greenproof …` albo `gp.cmd …` - jawne
-rozszerzenie omija tablicę aliasów. Alias można też zdjąć w profilu
-(`Remove-Item Alias:gp -Force`), ale w skrypcie CI nie ma na to co liczyć.
-W `cmd.exe` problemu nie ma. Ta pułapka jest zabramkowana krokiem
-`wrapper gp.cmd zakłada się i przenosi kod wyjścia` w
-`.github/workflows/windows.yml`.
-
-Drugi pwsh-izm w tej samej rodzinie, o którym trzeba pamiętać pisząc kroki CI:
-Actions doklejają na koniec każdego kroku `pwsh` linijkę
+Pwsh-izm, o którym trzeba pamiętać pisząc kroki CI (`shell: pwsh` to domyślna
+powłoka runnerów `windows-*`): Actions doklejają na koniec każdego kroku `pwsh` linijkę
 `if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit $LASTEXITCODE }`.
 Krok, który świadomie sprawdza NIEZEROWY kod wyjścia greenproofa (3/5/10 albo 2)
 i na tym kończy, wyjdzie tym właśnie kodem i zaświeci się na czerwono mimo
@@ -157,7 +145,7 @@ tam narzędzie `run_playwright` wykonuje testy i wersjonuje raporty
 (`pw-runs/`). **Lokalnie (adapter-fs, harnessy) używaj TRWAŁEJ lokalizacji**
 - np. `~/.local/share/greenproof/runs/<runId>` - nigdy `/tmp`: reboot
 kasuje workdiry, a artefakty case'a wolno usuwać dopiero po jego release
-(świadomą komendą `gp clean`, nie efektem ubocznym).
+(świadomą komendą `grp clean`, nie efektem ubocznym).
 Wzorzec w workflow: ustaw na
 `${{ runner.workspace }}/…` albo na katalog, w którym `actions/checkout@v4`
 zrobił checkout z `fetch-depth: 0` (konieczne, bo branche autora
@@ -216,11 +204,11 @@ kroki:
 - run: pnpm install --frozen-lockfile
 - run: pnpm exec playwright install --with-deps chromium
 
-- name: gp step filter
+- name: grp step filter
   env:
     GITHUB_TOKEN: ${{ secrets.GREENPROOF_TOKEN }}
   run: |
-    pnpm exec gp step filter --config greenproof.config.mjs \
+    pnpm exec grp step filter --config greenproof.config.mjs \
       --in filter-in.json --out filter-out.json
 
 - name: step triage + step author + step deliver
@@ -230,9 +218,9 @@ kroki:
     GREENPROOF_WORK_DIR: ${{ runner.workspace }}/work
   run: |
     jq -n --arg run "$RUN_ID" '{runId: $run}' > run.json
-    pnpm exec gp step triage  --config greenproof.config.mjs --in run.json
-    pnpm exec gp step author  --config greenproof.config.mjs --in run.json || [ $? -eq 3 ]
-    pnpm exec gp step deliver --config greenproof.config.mjs --in run.json
+    pnpm exec grp step triage  --config greenproof.config.mjs --in run.json
+    pnpm exec grp step author  --config greenproof.config.mjs --in run.json || [ $? -eq 3 ]
+    pnpm exec grp step deliver --config greenproof.config.mjs --in run.json
 ```
 
 `exit 3` z `step author` (częściowy sukces - część case'ów zablokowana) NIE ma

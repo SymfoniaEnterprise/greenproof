@@ -22,7 +22,7 @@ leżą w `skills/`:
 
 - **`skills/greenproof-start.md`** - PIERWSZA konfiguracja u użytkownika: wywiad
   onboardingowy (repo testów, adres appki, preset i model, token, minimalny
-  plan), preflight i przygotowanie pierwszej komendy `gp run`.
+  plan), preflight i przygotowanie pierwszej komendy `grp run`.
 - **`skills/greenproof-cli.md`** - odpalanie przebiegów przez CLI: wybór configu
   (gotowy z `configs/` vs `--tests-repo` od zera), komenda `greenproof run`
   z flagami, sekrety przez `.env`, kody wyjścia (0/2/3/5/10), komendy po runie.

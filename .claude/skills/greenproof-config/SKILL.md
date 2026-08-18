@@ -5,7 +5,7 @@ description: Configure the greenproof author model and provider - presets (codex
 
 Skill konfiguracji greenproof: trzy presety providerów, zmiana modelu (flaga
 `--author` vs jedno oznaczone miejsce w `configs/*.config.mjs`), zmiana
-providera (`--base-url`/`--token-env` + OBOWIĄZKOWY `gp preflight`),
+providera (`--base-url`/`--token-env` + OBOWIĄZKOWY `grp preflight`),
 eskalacja fixture, `priceTable`, capy warte ruszania, efforty i tokeny.
 
 Przeczytaj i stosuj instrukcje z `skills/greenproof-config.md` (ścieżka

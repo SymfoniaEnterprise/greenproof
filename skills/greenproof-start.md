@@ -7,7 +7,7 @@ Scenariusz wywiadu onboardingowego dla asystenta AI. Twoim celem jest przeprowad
 1. **Zadawaj JEDNO pytanie naraz i czekaj na odpowiedź.** Nigdy nie wyrzucaj formularza z kilkoma pytaniami naraz.
 2. **Najpierw WYKRYJ, potem pytaj.** Jeśli informację da się sprawdzić poleceniem (czy binarka działa, czy endpoint odpowiada, czy katalog jest repozytorium git, jakie modele zwraca brama), wykonaj sprawdzenie i pokaż wynik, zamiast kazać użytkownikowi zgadywać.
 3. **NIGDY nie wypisuj wartości tokenów ani nie wklejaj ich do komend widocznych w transkrypcie.** Token trafia wyłącznie do pliku `.env`, o którym informujesz, że jest dodany do `.gitignore`.
-4. **NIGDY nie uruchamiaj `gp run` samodzielnie bez wyraźnej zgody użytkownika.** Skill kończy się przygotowaniem gotowej komendy i pytaniem, czy ją odpalić.
+4. **NIGDY nie uruchamiaj `grp run` samodzielnie bez wyraźnej zgody użytkownika.** Skill kończy się przygotowaniem gotowej komendy i pytaniem, czy ją odpalić.
 5. **Gdy warunek wstępny nie jest spełniony (aplikacja nie odpowiada, preflight zwraca exit 2), ZATRZYMAJ SIĘ i wytłumacz, co naprawić.** Nie idź dalej na oślep.
 
 ---
@@ -16,12 +16,12 @@ Scenariusz wywiadu onboardingowego dla asystenta AI. Twoim celem jest przeprowad
 
 ### Krok 1: Weryfikacja CLI
 
-**Cel**: Upewnić się, że binarka `gp` działa i pokazać wersję.
+**Cel**: Upewnić się, że binarka `grp` działa i pokazać wersję.
 
 **Jak wykryć**:
 Wykonaj polecenie:
 ```sh
-gp --version
+grp --version
 ```
 
 Gdy nie ma binarki na PATH, załóż wrappery jedną komendą (z korzenia repo):
@@ -31,7 +31,7 @@ pnpm setup-cli
 ```
 
 **Co pokazać użytkownikowi**:
-- Pokaż wykrytą wersję CLI (np. `gp 0.1.12`).
+- Pokaż wykrytą wersję CLI (np. `grp 0.1.12`).
 - Gdy nie ma binarki na PATH, zaproponuj założenie wrappera (jedna komenda powyżej) i dopiero potem kontynuuj.
 - Przejdź do Kroku 2.
 
@@ -147,7 +147,7 @@ Sprawdź też, czy istnieje już plik `.env` w repozytorium testów lub katalogu
 **Jak wykryć**:
 Jeśli używany jest preset z endpointem (np. LiteLLM), pobierz listę dostępnych modeli:
 ```sh
-gp models --preset <preset>
+grp models --preset <preset>
 # lub jeśli config jeszcze nie istnieje:
 curl -s http://127.0.0.1:4000/v1/models
 ```
@@ -155,7 +155,7 @@ curl -s http://127.0.0.1:4000/v1/models
 **Działanie**:
 Pokaż użytkownikowi 2-3 rekomendowane modele w zależności od presetu:
 - Dla `litellm`:
-  - **Najpierw pokaż realną listę**: `gp models` - aliasy w bramie są instalacyjne,
+  - **Najpierw pokaż realną listę**: `grp models` - aliasy w bramie są instalacyjne,
     więc nazwy zgadnięte z pamięci zwykle nie istnieją. Preset zapisuje
     placeholder `<model-z-bramy>`, który MUSI zostać wypełniony.
   - Z listy: tani flash na start, `claude-sonnet-5` przy wysokiej skuteczności w Playwrighcie.
@@ -227,15 +227,15 @@ Pokaż zawartość pliku użytkownikowi i wskaż, że jest to punkt wyjścia do 
 
 ---
 
-### Krok 10: Generowanie pliku konfiguracyjnego (`gp run --init-only`)
+### Krok 10: Generowanie pliku konfiguracyjnego (`grp run --init-only`)
 
 **Cel**: Utworzyć i zweryfikować plik `greenproof.config.mjs`.
 
 **Działanie**:
-Zbuduj polecenie `gp run --init-only` z zebranych wcześniej informacji:
+Zbuduj polecenie `grp run --init-only` z zebranych wcześniej informacji:
 
 ```sh
-gp run \
+grp run \
   --tests-repo <sciezka-repo-testow> \
   --init-only \
   --preset <wybrany-preset> \
@@ -254,7 +254,7 @@ Uruchom polecenie. Pokaż użytkownikowi ścieżkę do wygenerowanego pliku konf
 **Działanie**:
 Uruchom:
 ```sh
-gp preflight --config <sciezka-do-configu>
+grp preflight --config <sciezka-do-configu>
 ```
 
 Wyjaśnij użytkownikowi, co sprawdza preflight:
@@ -272,13 +272,13 @@ Wyjaśnij użytkownikowi, co sprawdza preflight:
 
 ### Krok 12: Gotowa komenda uruchomienia
 
-**Cel**: Przedstawić pełną komendę `gp run` i zapytać o zgodę na uruchomienie.
+**Cel**: Przedstawić pełną komendę `grp run` i zapytać o zgodę na uruchomienie.
 
 **Działanie**:
 Złóż kompletną komendę uruchomieniową:
 
 ```sh
-gp run \
+grp run \
   --config <sciezka-do-configu> \
   --in <sciezka-do-plan.json> \
   --app-url <adres-appki> \
@@ -286,7 +286,7 @@ gp run \
 ```
 
 Wyjaśnij użytkownikowi:
-- Komenda `gp run` wykonuje całą orkiestrację w jednym procesie: `preflight → filter → triage → fixture → author → deliver → auto-accept`.
+- Komenda `grp run` wykonuje całą orkiestrację w jednym procesie: `preflight → filter → triage → fixture → author → deliver → auto-accept`.
 - Case'y spełniające deterministyczne kryterium (dowód mutacyjny `valid` +
   bez ostrzeżeń walidatora, czysty lint) pipeline akceptuje SAM; reszta
   czeka na człowieka. Auto-akceptację wyłącza `--no-auto-accept`.
@@ -297,7 +297,7 @@ Wyjaśnij użytkownikowi:
 Przebieg uruchamia **człowiek w swojej sesji terminala**, nigdy asystent w tle
 własnej sesji (uzasadnienie i pełna zasada: `skills/greenproof-cli.md`, §0a).
 Rola asystenta: sprawdzić warunki wstępne i **podać gotową komendę do wklejenia**.
-Po starcie asystent czyta stan z plików (`gp status --run <runId>`, `--out`),
+Po starcie asystent czyta stan z plików (`grp status --run <runId>`, `--out`),
 a nie ze stdout procesu.
 
 
@@ -309,19 +309,19 @@ a nie ze stdout procesu.
 Przedstaw krótką mapę postępowania:
 1. **Sprawdzenie statusu**:
    ```sh
-   gp status --config <config> --run <runId>
-   gp status --cases --config <config> --run <runId>
+   grp status --config <config> --run <runId>
+   grp status --cases --config <config> --run <runId>
    ```
 2. **Co robi pipeline sam, a co decyduje człowiek**:
    - Wyniki kończą się stanami raportów: `draft_delivered` (gotowy test; raport rozróżnia „zaakceptowane automatycznie" od „czeka na Ciebie"), `case_blocked` (blokada środowiska/aplikacji), `app_defect_suspected` (podejrzenie błędu w aplikacji).
    - Case'y z dowodem `valid` + czystym lintem pipeline zaakceptował automatycznie (`run.autoAccept.accepted`); nie wymagają akcji poza release.
    - Ręczna akceptacja case'a, którego pipeline NIE przyjął (dowód invalid, duplikat selektora, auto-accept wyłączona):
      ```sh
-     gp accept --config <config> --run <runId> --case <caseId>
+     grp accept --config <config> --run <runId> --case <caseId>
      ```
    - Ostateczne wydanie przebiegu po spełnieniu bramek (decyzja człowieka):
      ```sh
-     gp release --config <config> --run <runId>
+     grp release --config <config> --run <runId>
      ```
 
 **Odsyłacze do skilli**:
@@ -338,6 +338,6 @@ Przedstaw krótką mapę postępowania:
 | `curl` do `--app-url` zwraca błąd połączenia | Aplikacja testowana nie została uruchomiona | Uruchom serwer testowanej aplikacji w osobnym terminalu przed startem runu. |
 | Preflight zwraca `exit 2` z brakiem `tool_use` | Model lub brama/mostek nie obsługuje formatu narzędzi Anthropic | Zmień model na wspierający tool-calling lub sprawdź konfigurację mostka (np. CLIProxyAPI). |
 | Błąd HTTP 401 / 403 podczas preflightu | Brakujący, błędny lub wygasły token API | Sprawdź zmienną w `.env` (`LITELLM_KEY`, `CLIPROXY_TOKEN` lub `ANTHROPIC_AUTH_TOKEN`). |
-| `gp run --init-only` zgłasza błąd o brakującym `.git` | Wskazany katalog testów nie jest repozytorium git | Wykonaj `git init <sciezka>` w katalogu testów (greenproof commituje na gałęziach `author/*`). |
-| `gp run` odrzuca plik wejściowy `--in` | Plik planu nie spełnia schematu `NormalizedPlan` | Upewnij się, że plan zawiera pola `slug` oraz tablicę `cases` z wymaganymi polami (`caseId`, `title`, `level`, `priority`, `requirements`, `flows`). |
-| Pusta lista modeli w `gp models` | Brama nie jest uruchomiona lub nie udostępnia endpointu `/v1/models` | Uruchom bramę LiteLLM / CLIProxyAPI lub podaj nazwę modelu jawnie flagą `--author <nazwa>`. |
+| `grp run --init-only` zgłasza błąd o brakującym `.git` | Wskazany katalog testów nie jest repozytorium git | Wykonaj `git init <sciezka>` w katalogu testów (greenproof commituje na gałęziach `author/*`). |
+| `grp run` odrzuca plik wejściowy `--in` | Plik planu nie spełnia schematu `NormalizedPlan` | Upewnij się, że plan zawiera pola `slug` oraz tablicę `cases` z wymaganymi polami (`caseId`, `title`, `level`, `priority`, `requirements`, `flows`). |
+| Pusta lista modeli w `grp models` | Brama nie jest uruchomiona lub nie udostępnia endpointu `/v1/models` | Uruchom bramę LiteLLM / CLIProxyAPI lub podaj nazwę modelu jawnie flagą `--author <nazwa>`. |

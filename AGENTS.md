@@ -31,7 +31,7 @@ zanim zaczniesz działać.
 
 | Kiedy użyć | Przeczytaj |
 |---|---|
-| PIERWSZA konfiguracja greenproof u użytkownika: wywiad onboardingowy, repo testów, adres appki, preset i model, token, minimalny plan, preflight, pierwsza komenda `gp run` | `skills/greenproof-start.md` |
+| PIERWSZA konfiguracja greenproof u użytkownika: wywiad onboardingowy, repo testów, adres appki, preset i model, token, minimalny plan, preflight, pierwsza komenda `grp run` | `skills/greenproof-start.md` |
 | Użytkownik chce odpalić/powtórzyć/zdebugować przebieg testów: wybór configu, komenda `greenproof run`, flagi, `.env`, kody wyjścia, `status`/`accept`/`release`/`clean` | `skills/greenproof-cli.md` |
 | Trzeba zinterpretować wynik runu (`result.json`, `status.summary`, ledgery, dowody, transcripty), zdecydować retry vs eskalacja fixture, rekomendować accept/waiver/release, posprzątać albo monitorować długi run | `skills/greenproof-operator.md` |
 | Zmiana modelu autora lub providera (presety `codex-sub`/`litellm`/`claude-sub`, `--author`, `--base-url`/`--token-env`, preflight), eskalacja fixture, `priceTable`, capy, efforty, tokeny | `skills/greenproof-config.md` |

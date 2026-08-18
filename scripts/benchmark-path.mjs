@@ -28,7 +28,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 /**
  * Alias modelu eskalacji w bramie LiteLLM jest INSTALACYJNY - u każdego wpis
  * nazywa się inaczej, więc skrypt nie zgaduje. Ustaw `GP_FIXTURE_MODEL`
- * (nazwy podejrzysz przez `gp models`); bez tego preflight przerwie run
+ * (nazwy podejrzysz przez `grp models`); bez tego preflight przerwie run
  * komunikatem o niewypełnionym placeholderze.
  */
 const FIXTURE_MODEL = process.env.GP_FIXTURE_MODEL ?? '<model-eskalacji-z-bramy>';
