@@ -102,8 +102,7 @@ Wolisz ustawić wszystko sam - tu są presety, configi i wymagania:
 
 Pełna pętla `filter → triage → author → dowód mutacyjny → deliver → accept →
 release` na dwóch appkach demo. Koszty w tabelach to zawsze estymaty (tokeny ×
-cennik), oznaczone `(est.)`; przy abonamencie/subskrypcji realny wydatek
-z kieszeni to zero.
+cennik), oznaczone `(est.)`;
 
 ### Filozofia kosztowa
 
