@@ -6,8 +6,9 @@
  *
  * KONTRAKT I/O: stdout = wyłącznie JSON wyniku, stderr = wyłącznie logi.
  */
-import { access, readFile, mkdir, writeFile } from 'node:fs/promises';
+import { access, readFile, mkdir, open, rename, rm, writeFile } from 'node:fs/promises';
 import { constants, existsSync, realpathSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -864,10 +865,25 @@ async function emit(
   const json = `${JSON.stringify(output, null, 2)}\n`;
   if (out !== undefined) {
     const file = resolve(out);
-    await mkdir(dirname(file), { recursive: true });
-    await writeFile(file, json, 'utf8');
+    await writeOutputFile(file, json);
   }
   stdout(json);
+}
+
+async function writeOutputFile(file: string, content: string): Promise<void> {
+  const directory = dirname(file);
+  await mkdir(directory, { recursive: true });
+  const temporary = join(directory, `.greenproof-output-${randomUUID()}.tmp`);
+  const handle = await open(temporary, 'wx', 0o600);
+  try {
+    await handle.writeFile(content, 'utf8');
+    await handle.close();
+    await rename(temporary, file);
+  } catch (err) {
+    await handle.close().catch(() => undefined);
+    await rm(temporary, { force: true });
+    throw err;
+  }
 }
 
 function reportError(err: unknown, stderr: (text: string) => void): number {

@@ -39,10 +39,10 @@ jobs:
     steps:
       # Świadomie BEZ core.autocrlf=false: użytkownik na Windowsie klonuje repo
       # domyślnym gitem i dostaje CRLF. Jeśli to coś wywraca, chcemy to widzieć.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       # Bez `version:` - action czyta packageManager (pnpm@11.6.0) z package.json.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22 # engines: >=20; referencyjne workflow używają 22
           cache: pnpm
@@ -62,9 +62,9 @@ jobs:
       # miejsce awarii escapowania i cytowania ścieżek (wzorzec "Program Files (x86)").
       GP_TESTS_REPO: ${{ github.workspace }}\..\gp testy (x86) ze spacja
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm

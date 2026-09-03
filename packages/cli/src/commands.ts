@@ -4,7 +4,7 @@
  */
 import { execFile } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
@@ -335,8 +335,17 @@ export async function cmdInit(args: InitArgs): Promise<InitOutput> {
 
   const path = resolve(args.config ?? join(testsRepoDir, 'greenproof.config.mjs'));
   const force = args.force === true;
-  if (existsSync(path) && !force) {
-    throw new CliError(`Plik configu już istnieje: ${path} - użyj --force, aby go nadpisać.`);
+  let newConfigFile: Awaited<ReturnType<typeof open>> | undefined;
+  if (!force) {
+    await mkdir(dirname(path), { recursive: true });
+    try {
+      newConfigFile = await open(path, 'wx');
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+        throw new CliError(`Plik configu już istnieje: ${path} - użyj --force, aby go nadpisać.`);
+      }
+      throw err;
+    }
   }
 
   // dispatch woła cmdInit zanim applyDotenv; wczytujemy .env z katalogu configu,
@@ -376,14 +385,10 @@ export async function cmdInit(args: InitArgs): Promise<InitOutput> {
     if (force) {
       await writeFile(path, source, 'utf8');
     } else {
-      // wx chroni także przed wyścigiem dwóch równoległych `greenproof init`.
-      await writeFile(path, source, { encoding: 'utf8', flag: 'wx' });
+      await newConfigFile?.writeFile(source, 'utf8');
     }
-  } catch (err) {
-    if (!force && (err as NodeJS.ErrnoException).code === 'EEXIST') {
-      throw new CliError(`Plik configu już istnieje: ${path} - użyj --force, aby go nadpisać.`);
-    }
-    throw err;
+  } finally {
+    await newConfigFile?.close();
   }
 
   return {
@@ -1115,10 +1120,6 @@ async function knowledgeInit(dir: string): Promise<KnowledgeInitOutput> {
     [APP_MAP_FILE, APP_MAP_TEMPLATE],
   ] as const) {
     const file = join(dir, name);
-    if (existsSync(file)) {
-      skipped.push(file);
-      continue;
-    }
     // wx: nie nadpisujemy istniejącej wiedzy nawet przy wyścigu dwóch jobów.
     try {
       await writeFile(file, template, { flag: 'wx' });
