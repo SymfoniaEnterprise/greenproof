@@ -4,81 +4,19 @@
  *
  * Na Windows npm/npx/pnpm to skrypty `.cmd`, a od CVE-2024-27980
  * `spawn`/`execFile` ODMAWIA uruchomienia `.bat`/`.cmd` bez powłoki (EINVAL).
- * Doklejenie ".cmd" zamienia tylko ENOENT na EINVAL - zostają dwa wyjścia:
- * oddać komendę interpreterowi `cmd.exe` (`spawnArgv`) albo ominąć wrapper
- * `.cmd` i wywołać wprost `node.exe` ze skryptem (`npxDirect`). Drugie jest
- * lepsze wszędzie, gdzie się da: nie ma cmd.exe, nie ma parsera metaznaków.
- *
- * Poza Windowsem funkcje escapujące są tożsamościowe.
+ * Nie przekazujemy danych do `cmd.exe`: dla npm/npx omijamy wrapper `.cmd` i
+ * wywołujemy wprost `node.exe` ze skryptem CLI. Pozostałe komendy trafiają do
+ * `spawn` jako rozdzielone argv, bez powłoki.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-/**
- * Metaznaki, które cmd.exe interpretuje także wewnątrz komendy. `%` NIE jest na
- * liście świadomie - daszek PRZED procentem niczego nie blokuje, patrz
- * `escapeCmdMeta`.
- */
-const CMD_META = /[()\][!^"`<>&|;, *?]/;
-
 function isWindows(): boolean {
   return process.platform === 'win32';
 }
 
-/** Interpreter poleceń - COMSPEC bywa przestawiony, ale cmd.exe to fallback. */
-function comspec(): string {
-  const fromEnv = process.env['COMSPEC'];
-  return fromEnv !== undefined && fromEnv !== '' ? fromEnv : 'cmd.exe';
-}
-
-/**
- * Neutralizacja metaznaków cmd.exe. Zwykłe metaznaki dostają daszek PRZED sobą,
- * ale procent trzeba odwrotnie: rozwijanie `%ZMIENNA%` idzie w cmd FAZĘ WCZEŚNIEJ
- * niż zdejmowanie daszków, więc `^%PATH^%` nadal rozwija się do zawartości PATH
- * (nazwa `PATH` pozostaje nietknięta). Działa dopiero zepsucie NAZWY: daszek
- * wstawiony ZARAZ ZA procentem sprawia, że cmd szuka zmiennej `^PATH^`, żadnej
- * takiej nie znajduje, a w linii poleceń (inaczej niż w pliku .bat) nierozwinięty
- * tekst zostaje bez zmian - po zdjęciu daszków wraca dokładnie `%PATH%`.
- *
- * Ten sam daszek escapuje przy okazji następny znak, więc nie dokładamy drugiego.
- * Procent na SAMYM KOŃCU tekstu zostaje goły (daszek na końcu linii to sklejenie
- * wierszy) - jest bezpieczny, bo nie ma już czym domknąć nazwy zmiennej.
- */
-function escapeCmdMeta(text: string): string {
-  let out = '';
-  let caretOwed = false;
-  for (const ch of text) {
-    if (caretOwed || CMD_META.test(ch)) out += '^';
-    caretOwed = ch === '%';
-    out += ch;
-  }
-  return out;
-}
-
-/** Nazwa komendy: sam escape metaznaków, bez cudzysłowów - inaczej cmd nie
- *  rozwinie PATHEXT i nie znajdzie npx.cmd po samej nazwie. */
-function escapeCommand(command: string): string {
-  return escapeCmdMeta(command);
-}
-
-/**
- * Argument: najpierw cudzysłowy wg CommandLineToArgvW (backslashe przed
- * cudzysłowem i na końcu argumentu się podwajają), potem escape metaznaków.
- * Algorytm jak w cross-spawn / https://qntm.org/cmd, plus poprawka na procenty.
- * Stawką jest wstrzyknięcie komendy: argv `run_playwright` niesie wzorzec
- * `--grep` pochodzący OD MODELU.
- */
-function escapeArgument(arg: string): string {
-  const quoted = `"${arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, '$1$1')}"`;
-  return escapeCmdMeta(quoted);
-}
-
-/** Opcje, które MUSZĄ trafić do execFile/spawn razem z wynikiem `spawnArgv`. */
-export interface SpawnArgvOptions {
-  /** Na Windows linię poleceń składamy sami - Node nie może jej cytować drugi raz. */
-  windowsVerbatimArguments?: true;
-}
+export interface SpawnArgvOptions {}
 
 export interface SpawnArgv {
   command: string;
@@ -87,21 +25,24 @@ export interface SpawnArgv {
 }
 
 /**
- * Komenda dla `execFile`/`spawn` tam, gdzie KONTROLUJEMY opcje wywołania.
- * Na Windows owija w `cmd.exe /d /s /c "…"` z ręcznym escapowaniem, więc
- * działa dla dowolnych argumentów (także ze spacjami).
- *
+ * Komenda dla `execFile`/`spawn`, bez przekazywania argumentów przez powłokę.
  * Zwrócone `options` rozpakowujesz do opcji spawnu:
  * `execFileP(command, args, { cwd, ...options })`.
  */
 export function spawnArgv(command: string, args: readonly string[]): SpawnArgv {
-  if (!isWindows()) return { command, args: [...args], options: {} };
-  const line = [escapeCommand(command), ...args.map(escapeArgument)].join(' ');
-  return {
-    command: comspec(),
-    args: ['/d', '/s', '/c', `"${line}"`],
-    options: { windowsVerbatimArguments: true },
-  };
+  const direct = packageManagerDirect(command, args);
+  return direct === undefined ? { command, args: [...args], options: {} } : { ...direct, options: {} };
+}
+
+function packageManagerDirect(
+  command: string,
+  args: readonly string[],
+): { command: string; args: string[] } | undefined {
+  if (!isWindows()) return undefined;
+  const script = command === 'npx' ? 'npx-cli.js' : command === 'npm' ? 'npm-cli.js' : undefined;
+  if (script === undefined) return undefined;
+  const cli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', script);
+  return existsSync(cli) ? { command: process.execPath, args: [cli, ...args] } : undefined;
 }
 
 /**
@@ -118,12 +59,7 @@ export function spawnArgv(command: string, args: readonly string[]): SpawnArgv {
 export function npxDirect(
   args: readonly string[],
 ): { command: string; args: string[] } | undefined {
-  if (!isWindows()) return undefined;
-  // Układ instalacji npm na Windowsie (oficjalny instalator, nvm-windows, fnm,
-  // volta): npx-cli.js leży w node_modules\npm\bin obok samego node.exe.
-  const cli = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js');
-  if (!existsSync(cli)) return undefined;
-  return { command: process.execPath, args: [cli, ...args] };
+  return packageManagerDirect('npx', args);
 }
 
 /**
