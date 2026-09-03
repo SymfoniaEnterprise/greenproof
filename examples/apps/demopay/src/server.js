@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyCookie from '@fastify/cookie';
+import fastifyRateLimit from '@fastify/rate-limit';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -24,6 +25,7 @@ const DEMO_PASSWORD = 'demo123';
 const app = Fastify({ logger: false });
 
 app.register(fastifyCookie);
+await app.register(fastifyRateLimit, { max: 100, timeWindow: '1 minute' });
 app.register(fastifyStatic, {
   root: PUBLIC_DIR,
   index: false,

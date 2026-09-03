@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyCookie from '@fastify/cookie';
+import fastifyRateLimit from '@fastify/rate-limit';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
@@ -14,6 +15,7 @@ const PORT = parseInt(process.env.DEMO_PORT || '3132');
 const app = Fastify({ logger: false });
 
 app.register(fastifyCookie);
+await app.register(fastifyRateLimit, { max: 100, timeWindow: '1 minute' });
 app.register(fastifyStatic, { root: PUBLIC_DIR, index: false });
 
 function isAuthenticated(request) {
