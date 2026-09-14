@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { GreenproofConfig } from '../config/types.js';
 import type { BlockedReason } from '../domain/state.js';
-import type { AuthorPhase, TokenUsage } from '../domain/attempt.js';
+import type { AuthorPhase } from '../domain/attempt.js';
 import { emitProgress, type ProgressSink } from '../domain/progress.js';
 import type { CaseContext } from '../steps/triage.js';
 import { AuthorSessionState, type FinishInfo } from './state.js';
@@ -16,6 +16,7 @@ import {
   type CopilotMcpBootstrap,
 } from './stateTransfer.js';
 import { copilotAutopilotContinueCap, copilotEnvironment, copilotRuntimeScriptPath } from './copilotEnvironment.js';
+import { priceCopilotUsage, readCopilotUsage } from './copilotUsage.js';
 import { mcpServerCommand, runToCompletion, spawnArgv } from '../util/exec.js';
 import type { AuthorSessionOptions, AuthorSessionResult } from './session.js';
 
@@ -70,98 +71,6 @@ function emitTurn(
       greenRuns: state.greenRuns,
     },
   });
-}
-
-function readNumeric(value: unknown, keys: string[]): number | undefined {
-  if (value === null || typeof value !== 'object') return undefined;
-  for (const key of keys) {
-    const candidate = (value as Record<string, unknown>)[key];
-    if (typeof candidate === 'number' && Number.isFinite(candidate)) return candidate;
-  }
-  return undefined;
-}
-
-interface CopilotUsage {
-  costUsd: number;
-  tokens: TokenUsage;
-  modelUsage: Record<string, TokenUsage>;
-}
-
-function tokenUsage(value: unknown): TokenUsage {
-  return {
-    input: readNumeric(value, ['input_tokens', 'inputTokens']) ?? 0,
-    output: readNumeric(value, ['output_tokens', 'outputTokens']) ?? 0,
-    cacheRead: readNumeric(value, ['cache_read_input_tokens', 'cacheReadInputTokens']) ?? 0,
-    cacheCreation: readNumeric(value, ['cache_creation_input_tokens', 'cacheCreationInputTokens']) ?? 0,
-  };
-}
-
-function addTokens(target: TokenUsage, source: TokenUsage): void {
-  target.input += source.input;
-  target.output += source.output;
-  target.cacheRead += source.cacheRead;
-  target.cacheCreation += source.cacheCreation;
-}
-
-function parseCopilotUsage(value: unknown): CopilotUsage {
-  const root = value !== null && typeof value === 'object' ? value as Record<string, unknown> : {};
-  const nestedUsage = root['usage'] ?? root['tokenUsage'];
-  const tokens = tokenUsage(nestedUsage ?? root);
-  const modelUsage: Record<string, TokenUsage> = {};
-  const rawModelUsage = root['modelUsage'];
-  if (rawModelUsage !== null && typeof rawModelUsage === 'object') {
-    tokens.input = 0;
-    tokens.output = 0;
-    tokens.cacheRead = 0;
-    tokens.cacheCreation = 0;
-    for (const [model, usage] of Object.entries(rawModelUsage)) {
-      const parsed = tokenUsage(usage);
-      modelUsage[model] = parsed;
-      addTokens(tokens, parsed);
-    }
-  }
-  return {
-    costUsd:
-      readNumeric(root, ['total_cost_usd', 'costUsd', 'cost_usd']) ??
-      readNumeric(nestedUsage, ['total_cost_usd', 'costUsd', 'cost_usd']) ??
-      0,
-    tokens,
-    modelUsage,
-  };
-}
-
-async function readCopilotUsage(path: string): Promise<CopilotUsage> {
-  try {
-    return parseCopilotUsage(JSON.parse(await readFile(path, 'utf8')) as unknown);
-  } catch {
-    return { costUsd: 0, tokens: { input: 0, output: 0, cacheRead: 0, cacheCreation: 0 }, modelUsage: {} };
-  }
-}
-
-function priceUsage(config: GreenproofConfig, usage: CopilotUsage): number {
-  if (config.model.priceTable === undefined) return usage.costUsd;
-  const per = 1 / 1_000_000;
-  let cost = 0;
-  for (const [model, tokens] of Object.entries(usage.modelUsage)) {
-    const price = config.model.priceTable[model] ?? config.model.priceTable[config.model.author];
-    if (!price) continue;
-    cost +=
-      tokens.input * price.inPerMTok * per +
-      tokens.output * price.outPerMTok * per +
-      tokens.cacheRead * (price.cacheReadPerMTok ?? price.inPerMTok * 0.1) * per +
-      tokens.cacheCreation * (price.cacheWritePerMTok ?? price.inPerMTok * 1.25) * per;
-  }
-  if (Object.keys(usage.modelUsage).length === 0) {
-    const price = config.model.priceTable[config.model.author];
-    if (price) {
-      cost =
-        usage.tokens.input * price.inPerMTok * per +
-        usage.tokens.output * price.outPerMTok * per +
-        usage.tokens.cacheRead * (price.cacheReadPerMTok ?? price.inPerMTok * 0.1) * per +
-        usage.tokens.cacheCreation * (price.cacheWritePerMTok ?? price.inPerMTok * 1.25) * per;
-    }
-  }
-  return cost > 0 ? cost : usage.costUsd;
 }
 
 function phaseFromState(path: string, fallback: AuthorPhase): AuthorPhase {
@@ -405,7 +314,7 @@ export async function runCopilotAuthorSession(
         usageBusy = true;
         try {
           const usage = await readCopilotUsage(usagePath);
-          const cost = priceUsage(config, usage);
+          const cost = priceCopilotUsage(config, usage);
           if (cost > state.costUsd) state.costUsd = cost;
           if (state.costUsd > config.caps.maxCostUsd) {
             state.interruptReason ??= 'budget';
@@ -483,7 +392,7 @@ export async function runCopilotAuthorSession(
     state.tokens = usage.tokens;
   }
   if (config.model.priceTable !== undefined) {
-    state.costUsd = Math.max(state.costUsd, priceUsage(config, usage));
+    state.costUsd = Math.max(state.costUsd, priceCopilotUsage(config, usage));
     if (state.costUsd > config.caps.maxCostUsd) state.interruptReason ??= 'budget';
   }
   const costUsdSdk = usage.costUsd;
@@ -497,6 +406,7 @@ export async function runCopilotAuthorSession(
   let cappedBy: BlockedReason | undefined = state.interruptReason;
   if (outcome.timedOutBeforeOutput) cappedBy = 'infra';
   else if (outcome.timedOut) cappedBy ??= 'time';
+  else if (!state.proofMaterial && state.playwrightRunsExhausted) cappedBy ??= 'playwright-runs';
 
   const cleanExit = outcome.exitCode === 0 && outcome.signal === null && !outcome.timedOut && outcome.spawnError === undefined;
   const structured: FinishInfo | undefined = cleanExit && cappedBy === undefined ? state.finish : undefined;

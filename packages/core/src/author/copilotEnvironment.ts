@@ -34,16 +34,9 @@ export function copilotAutopilotContinueCap(maxTurns: number, configured?: numbe
 }
 
 export const COPILOT_FIXTURE_SHELL_DENY_ARGS = [
-  '--deny-tool=shell(git push)',
-  '--deny-tool=shell(rm)',
-  '--deny-tool=shell(gh)',
-  '--deny-tool=shell(rm -rf)',
-  '--deny-tool=shell(rm -fr)',
-  '--deny-tool=shell(rm -r)',
-  '--deny-tool=shell(rm -f)',
-  '--deny-tool=shell(gh pr)',
-  '--deny-tool=shell(gh release)',
-  '--deny-tool=shell(gh repo)',
+  '--deny-tool=shell(git push*)',
+  '--deny-tool=shell(rm*)',
+  '--deny-tool=shell(gh*)',
 ] as const;
 
 export function copilotRuntimeScriptPath(metaUrl: string, fileName: string): string {

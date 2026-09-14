@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 interface FixtureBootstrap {
   statePath: string;
+  attemptDir?: string;
 }
 
 interface FixtureState {

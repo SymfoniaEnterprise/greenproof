@@ -5,6 +5,7 @@ import type { FixtureSessionDeps, FixtureSessionOutput, FixtureSessionResult } f
 import { fixturePrompt, fixtureSystemPrompt } from './fixtureSession.js';
 import { emitProgress } from '../domain/progress.js';
 import { copilotAutopilotContinueCap, copilotEnvironment, copilotRuntimeScriptPath, COPILOT_FIXTURE_SHELL_DENY_ARGS } from './copilotEnvironment.js';
+import { priceCopilotUsage, readCopilotUsage } from './copilotUsage.js';
 import { mcpServerCommand, runToCompletion, spawnArgv } from '../util/exec.js';
 
 interface CopilotEvent { type?: unknown; event?: unknown; kind?: unknown }
@@ -34,7 +35,7 @@ export async function runCopilotFixtureSession(
   const playwrightBootstrapPath = join(deps.attemptDir, 'copilot-fixture-playwright-bootstrap.json');
   const fixtureServerPath = copilotRuntimeScriptPath(import.meta.url, 'copilotFixtureMcpServer');
   const playwrightProxyPath = copilotRuntimeScriptPath(import.meta.url, 'copilotPlaywrightMcpServer');
-  await writeFile(bootstrapPath, JSON.stringify({ statePath }));
+  await writeFile(bootstrapPath, JSON.stringify({ statePath, attemptDir: deps.attemptDir }));
 
   const playwright = mcpServerCommand('npx', [
     '@playwright/mcp@latest', '--isolated', '--headless', '--browser', 'chromium',
@@ -105,7 +106,10 @@ export async function runCopilotFixtureSession(
   const spawned = spawnArgv(cli?.command ?? 'copilot', args);
   const controller = new AbortController();
   const started = Date.now();
-  let cappedBy: 'time' | 'infra' | 'turns' | undefined;
+  const fixtureModel = deps.config.model.fixtureAuthor?.model ?? deps.config.model.author;
+  let cappedBy: 'time' | 'infra' | 'turns' | 'budget' | undefined;
+  let costUsd = 0;
+  let usageBusy = false;
   let turns = 0;
   let firstTurnSeen = false;
   let partialLine = '';
@@ -132,7 +136,7 @@ export async function runCopilotFixtureSession(
             maxTurns: deps.config.caps.fixtureSession.maxTurns,
             elapsedSec: Math.round((Date.now() - started) / 1000),
             maxTimeSec: deps.config.caps.fixtureSession.maxTimeMinutes * 60,
-            costUsd: 0,
+            costUsd,
             maxCostUsd: deps.config.caps.fixtureSession.maxCostUsd,
           });
           if (turns >= deps.config.caps.fixtureSession.maxTurns) {
@@ -146,6 +150,21 @@ export async function runCopilotFixtureSession(
   const onStderr = (chunk: string): void => {
     appendFileSync(messagesPath, `{"stream":"stderr","text":${JSON.stringify(chunk)}}\n`);
   };
+  const usageTimer = setInterval(async () => {
+    if (usageBusy || controller.signal.aborted) return;
+    usageBusy = true;
+    try {
+      const usage = await readCopilotUsage(usagePath);
+      costUsd = Math.max(costUsd, priceCopilotUsage(deps.config, usage, fixtureModel));
+      if (costUsd > deps.config.caps.fixtureSession.maxCostUsd) {
+        cappedBy ??= 'budget';
+        controller.abort();
+      }
+    } finally {
+      usageBusy = false;
+    }
+  }, 250);
+  usageTimer.unref();
   const outcome = await runToCompletion(spawned.command, spawned.args, {
     cwd: deps.cwd,
     env: copilotEnvironment(),
@@ -157,6 +176,10 @@ export async function runCopilotFixtureSession(
     onStdout,
     onStderr,
   });
+  clearInterval(usageTimer);
+  const usage = await readCopilotUsage(usagePath);
+  costUsd = Math.max(costUsd, priceCopilotUsage(deps.config, usage, fixtureModel));
+  if (costUsd > deps.config.caps.fixtureSession.maxCostUsd) cappedBy ??= 'budget';
   const structured = await readFixtureState(statePath);
   if (outcome.timedOutBeforeOutput) cappedBy = 'infra';
   else if (outcome.timedOut) cappedBy ??= 'time';
@@ -166,7 +189,7 @@ export async function runCopilotFixtureSession(
     resultSubtype: outcome.timedOut || cappedBy !== undefined ? 'aborted' : outcome.exitCode === 0 ? 'success' : 'error_during_execution',
     ...(cappedBy !== undefined ? { cappedBy } : {}),
     ...(cleanExit && structured !== undefined ? { structured } : {}),
-    costUsd: 0,
+    costUsd,
     turns,
     messagesPath,
   };
