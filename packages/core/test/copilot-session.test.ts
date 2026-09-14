@@ -110,10 +110,7 @@ function context(): CaseContext {
 async function makeLauncher(root: string): Promise<string> {
   const script = join(root, 'fake-copilot.mjs');
   await writeFile(script, FAKE_COPILOT, { mode: 0o755 });
-  if (process.platform !== 'win32') return script;
-  const launcher = join(root, 'fake-copilot.cmd');
-  await writeFile(launcher, '@node "%~dp0fake-copilot.mjs" %*\r\n');
-  return launcher;
+  return script;
 }
 
 async function runFake(mode: 'success' | 'error', launcher: string) {

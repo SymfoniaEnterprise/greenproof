@@ -11,9 +11,12 @@
  *
  * Poza Windowsem funkcje escapujące są tożsamościowe.
  */
-import { spawn, type ChildProcess } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+
+const crossSpawn = createRequire(import.meta.url)('cross-spawn') as typeof nodeSpawn;
 
 /**
  * Metaznaki, które cmd.exe interpretuje także wewnątrz komendy. `%` NIE jest na
@@ -69,9 +72,27 @@ function escapeCommand(command: string): string {
  * Stawką jest wstrzyknięcie komendy: argv `run_playwright` niesie wzorzec
  * `--grep` pochodzący OD MODELU.
  */
+function quoteWindowsArgument(arg: string): string {
+  let quoted = '"';
+  let backslashes = 0;
+  for (const character of arg) {
+    if (character === '\\') {
+      backslashes += 1;
+      continue;
+    }
+    if (character === '"') {
+      quoted += '\\'.repeat(backslashes * 2 + 1) + '"';
+    } else {
+      quoted += '\\'.repeat(backslashes) + character;
+    }
+    backslashes = 0;
+  }
+  quoted += '\\'.repeat(backslashes * 2) + '"';
+  return quoted;
+}
+
 function escapeArgument(arg: string): string {
-  const quoted = `"${arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, '$1$1')}"`;
-  return escapeCmdMeta(quoted);
+  return escapeCmdMeta(quoteWindowsArgument(arg));
 }
 
 /** Opcje, które MUSZĄ trafić do execFile/spawn razem z wynikiem `spawnArgv`. */
@@ -95,6 +116,9 @@ export interface SpawnArgv {
  * `execFileP(command, args, { cwd, ...options })`.
  */
 export function spawnArgv(command: string, args: readonly string[]): SpawnArgv {
+  if (/\.(?:c|m)?js$/i.test(command)) {
+    return { command: process.execPath, args: [command, ...args], options: {} };
+  }
   if (!isWindows()) return { command, args: [...args], options: {} };
   const line = [escapeCommand(command), ...args.map(escapeArgument)].join(' ');
   return {
@@ -201,7 +225,7 @@ function killTree(child: ChildProcess, signal: NodeJS.Signals): void {
     // taskkill /T. Sam `child.kill()` osierociłby potomków, zanim taskkill
     // zdąży ich policzyć, więc leci dopiero jako fallback.
     try {
-      const tk = spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
+      const tk = nodeSpawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
       tk.once('error', () => {
         try {
           child.kill();
@@ -282,7 +306,7 @@ export function runToCompletion(
     };
 
     try {
-      child = spawn(command, [...args], {
+      child = crossSpawn(command, [...args], {
         cwd: opts.cwd,
         env: opts.env,
         stdio: opts.onStdout !== undefined || opts.onStderr !== undefined
