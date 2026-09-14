@@ -33,6 +33,18 @@ describe('copilotEnvironment', () => {
     expect(env['CLIPROXY_TOKEN']).toBeUndefined();
   });
 
+  it('przekazuje konfigurację proxy do podprocesów sieciowych', () => {
+    process.env['HTTP_PROXY'] = 'http://proxy.example:8080';
+    process.env['HTTPS_PROXY'] = 'http://proxy.example:8080';
+    process.env['NO_PROXY'] = 'localhost,127.0.0.1';
+
+    const env = copilotEnvironment();
+
+    expect(env['HTTP_PROXY']).toBe('http://proxy.example:8080');
+    expect(env['HTTPS_PROXY']).toBe('http://proxy.example:8080');
+    expect(env['NO_PROXY']).toBe('localhost,127.0.0.1');
+  });
+
   it('wycina poświadczenia i IPC Claude/Anthropic', () => {
     process.env['ANTHROPIC_API_KEY'] = 'sk-secret';
     process.env['ANTHROPIC_BASE_URL'] = 'https://example';
