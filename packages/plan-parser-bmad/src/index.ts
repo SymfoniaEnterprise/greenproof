@@ -84,7 +84,20 @@ function isTableLine(line: string): boolean {
 function isSeparatorLine(line: string): boolean {
   if (!isTableLine(line)) return false;
   const cells = splitCells(line);
-  return cells.length > 0 && cells.every((c) => /^:?-+:?$/.test(c));
+  return cells.length > 0 && cells.every(isSeparatorCell);
+}
+
+function isSeparatorCell(cell: string): boolean {
+  const value = cell.trim();
+  let start = 0;
+  let end = value.length;
+  if (value.startsWith(':')) start++;
+  if (value.endsWith(':')) end--;
+  if (end - start < 1) return false;
+  for (let index = start; index < end; index++) {
+    if (value.charAt(index) !== '-') return false;
+  }
+  return true;
 }
 
 /** Zbiera wszystkie tabele markdown poza sekcjami ignorowanymi. */
@@ -233,14 +246,27 @@ function slugify(value: string): string {
 }
 
 /** Etykieta dokumentu przed dwukropkiem nie jest częścią nazwy feature. */
-const TITLE_LABEL_RE = /^\s*(test[\s-]*design|test\s*plan|plan\s*test(o|ó)w|projekt\s*test(o|ó)w)\s*:\s*/i;
+function withoutTitleLabel(value: string): string {
+  const separator = value.indexOf(':');
+  if (separator === -1) return value;
+  const label = value.slice(0, separator).trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replaceAll(' ', '')
+    .replaceAll('\t', '')
+    .replaceAll('-', '');
+  return ['testdesign', 'testplan', 'plantestow', 'projekttestow'].includes(label)
+    ? value.slice(separator + 1).trim()
+    : value;
+}
 
 function slugFromHeading(lines: string[]): string | undefined {
   for (const line of lines) {
-    const m = /^#\s+(.+?)\s*$/.exec(line.trim());
-    if (!m) continue;
-    const raw = (m[1] ?? '').replace(/[`*_]/g, '');
-    const slug = slugify(raw.replace(TITLE_LABEL_RE, ''));
+    const heading = line.trim();
+    if (!heading.startsWith('# ')) continue;
+    const raw = heading.slice(2).trim().replace(/[`*_]/g, '');
+    const slug = slugify(withoutTitleLabel(raw));
     return slug === '' ? undefined : slug;
   }
   return undefined;

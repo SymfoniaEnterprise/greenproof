@@ -20,6 +20,7 @@ function stubNodeInstall(withNpm: boolean): string {
     const binDir = join(dir, 'node_modules', 'npm', 'bin');
     mkdirSync(binDir, { recursive: true });
     writeFileSync(join(binDir, 'npx-cli.js'), '');
+    writeFileSync(join(binDir, 'npm-cli.js'), '');
   }
   process.execPath = exe;
   return exe;
@@ -44,71 +45,28 @@ describe('spawnArgv', () => {
     expect(spawnArgv('npm', ['install']).options.windowsVerbatimArguments).toBeUndefined();
   });
 
-  it('na Windows owija komendę w cmd.exe /d /s /c i włącza tryb verbatim', () => {
+  it('na Windows uruchamia npx przez node.exe bez cmd.exe', () => {
     stubPlatform('win32');
-    vi.stubEnv('COMSPEC', '');
+    const exe = stubNodeInstall(true);
     const r = spawnArgv('npx', ['playwright', 'test']);
-    expect(r.command).toBe('cmd.exe');
-    expect(r.args.slice(0, 3)).toEqual(['/d', '/s', '/c']);
-    expect(r.args).toHaveLength(4);
-    expect(r.options).toEqual({ windowsVerbatimArguments: true });
+    expect(r.command).toBe(exe);
+    expect(r.args).toEqual([join(exe, '..', 'node_modules', 'npm', 'bin', 'npx-cli.js'), 'playwright', 'test']);
+    expect(r.options).toEqual({});
   });
 
-  it('na Windows nie cytuje samej nazwy komendy - inaczej cmd nie rozwinie PATHEXT', () => {
+  it('na Windows uruchamia npm przez node.exe bez cmd.exe', () => {
     stubPlatform('win32');
-    const line = spawnArgv('npx', []).args[3] ?? '';
-    expect(line).toBe('"npx"');
+    const exe = stubNodeInstall(true);
+    expect(spawnArgv('npm', ['install']).command).toBe(exe);
   });
 
-  it('na Windows honoruje COMSPEC', () => {
+  it('na Windows nie zmienia niepowłokowych komend', () => {
     stubPlatform('win32');
-    vi.stubEnv('COMSPEC', 'C:\\Windows\\System32\\cmd.exe');
-    expect(spawnArgv('npm', ['install']).command).toBe('C:\\Windows\\System32\\cmd.exe');
-  });
-
-  it('na Windows cytuje argumenty ze spacjami', () => {
-    stubPlatform('win32');
-    const line = spawnArgv('npx', ['tests/moje testy/a.spec.ts']).args[3] ?? '';
-    // Argument dostaje cudzysłowy, a spacja - jak każdy metaznak cmd - daszek.
-    expect(line).toContain('^"tests/moje^ testy/a.spec.ts^"');
-  });
-
-  it('na Windows escapuje metaznaki cmd we wzorcu --grep', () => {
-    stubPlatform('win32');
-    const line = spawnArgv('npx', ['--grep', 'logowanie & wylogowanie']).args[3] ?? '';
-    // & musi zostać zneutralizowane, inaczej cmd potraktuje je jako separator komend
-    expect(line).toContain('^&');
-    expect(line).not.toMatch(/[^^]&/);
-  });
-
-  it('na Windows psuje nazwę zmiennej po procencie (daszek PRZED % nie działa)', () => {
-    stubPlatform('win32');
-    const line = spawnArgv('npx', ['--grep', '%PATH%']).args[3] ?? '';
-    // `^%PATH^%` cmd i tak rozwinie - nazwa PATH zostaje nietknięta. Blokuje
-    // dopiero daszek ZARAZ ZA procentem: cmd szuka zmiennej `^PATH^`, nie znajduje,
-    // a w linii poleceń nierozwinięty tekst zostaje - po zdjęciu daszków wraca `%PATH%`.
-    expect(line).toContain('^"%^PATH%^"');
-    // Niezmiennik: po ŻADNYM procencie nie stoi znak, który mógłby zacząć nazwę zmiennej.
-    expect(line).not.toMatch(/%(?!\^)/);
-  });
-
-  it('na Windows radzi sobie z podwójnym procentem i procentem na końcu', () => {
-    stubPlatform('win32');
-    expect(spawnArgv('npx', ['--grep', '%%']).args[3] ?? '').toContain('^"%^%^"');
-    expect(spawnArgv('npx', ['--grep', '100%']).args[3] ?? '').toContain('^"100%^"');
-  });
-
-  it('na Windows podwaja backslashe przed cudzysłowem w argumencie', () => {
-    stubPlatform('win32');
-    const line = spawnArgv('npx', ['a\\"b']).args[3] ?? '';
-    expect(line).toContain('a\\\\\\^"b');
-  });
-
-  it('cała linia poleceń jest opakowana w cudzysłowy dla /s', () => {
-    stubPlatform('win32');
-    const line = spawnArgv('npx', ['playwright', 'test']).args[3] ?? '';
-    expect(line.startsWith('"')).toBe(true);
-    expect(line.endsWith('"')).toBe(true);
+    expect(spawnArgv('playwright.exe', ['--grep', 'logowanie & wylogowanie'])).toEqual({
+      command: 'playwright.exe',
+      args: ['--grep', 'logowanie & wylogowanie'],
+      options: {},
+    });
   });
 });
 

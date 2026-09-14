@@ -74,47 +74,6 @@ function displayPath(p) {
   return p;
 }
 
-// --- Obejście Windowsa dla spawnu (kopia packages/core/src/util/exec.ts) -----
-// Od łatki CVE-2024-27980 (Node 18.20.2/20.12.2/21.7.3) spawn/spawnSync ODMAWIA
-// uruchomienia pliku `.bat`/`.cmd` bez powłoki i rzuca EINVAL. Jedyne wyjście:
-// oddać komendę interpreterowi cmd.exe i samemu złożyć linię poleceń.
-// Procent NIE jest na liscie metaznakow: daszek PRZED nim nie blokuje
-// rozwijania %ZMIENNEJ% (rozwijanie idzie faze wczesniej niz zdejmowanie
-// daszkow). Blokuje dopiero daszek ZARAZ ZA procentem - psuje nazwe zmiennej,
-// a nierozwiniety tekst w linii polecen zostaje bez zmian.
-const CMD_META = /[()\][!^"`<>&|;, *?]/;
-
-function escapeCmdMeta(text) {
-  let out = "";
-  let caretOwed = false;
-  for (const ch of text) {
-    if (caretOwed || CMD_META.test(ch)) out += "^";
-    caretOwed = ch === "%";
-    out += ch;
-  }
-  return out;
-}
-
-function escapeCommand(command) {
-  return escapeCmdMeta(command);
-}
-
-function escapeArgument(arg) {
-  const quoted = `"${arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, "$1$1")}"`;
-  return escapeCmdMeta(quoted);
-}
-
-function spawnArgv(command, args) {
-  if (!IS_WINDOWS) return { command, args: [...args], options: {} };
-  const line = [escapeCommand(command), ...args.map(escapeArgument)].join(" ");
-  return {
-    command: process.env.COMSPEC || "cmd.exe",
-    args: ["/d", "/s", "/c", `"${line}"`],
-    options: { windowsVerbatimArguments: true },
-  };
-}
-// ----------------------------------------------------------------------------
-
 // Wyciaga sciezke docelowa z istniejacego wrappera (pierwszy cudzyslow z main.js)
 // i kanonizuje ja, zeby moc porownac z naszym dist/main.js. Wrapper .cmd trzyma
 // sciezke w tych samych cudzyslowach co bashowy, wiec wzorzec jest wspolny.
@@ -171,11 +130,8 @@ function pathHint() {
 }
 
 function runWrapper(name) {
-  const dest = path.join(targetDir, wrapperFile(name));
-  const argv = spawnArgv(dest, ["--version"]);
-  const res = spawnSync(argv.command, argv.args, {
+  const res = spawnSync(process.execPath, [mainJs, "--version"], {
     encoding: "utf8",
-    ...argv.options,
   });
   if (res.error) {
     console.error(`[setup-cli] nie udalo sie uruchomic ${name}: ${res.error.message}`);
