@@ -308,24 +308,22 @@ export async function runCopilotAuthorSession(
   };
 
   let usageBusy = false;
-  const usageTimer = config.model.priceTable === undefined
-    ? undefined
-    : setInterval(async () => {
-        if (usageBusy || controller.signal.aborted) return;
-        usageBusy = true;
-        try {
-          const usage = await readCopilotUsage(usagePath);
-          const cost = priceCopilotUsage(config, usage);
-          if (cost > state.costUsd) state.costUsd = cost;
-          if (state.costUsd > config.caps.maxCostUsd) {
-            state.interruptReason ??= 'budget';
-            controller.abort();
-          }
-        } finally {
-          usageBusy = false;
-        }
-      }, 250);
-  usageTimer?.unref();
+  const usageTimer = setInterval(async () => {
+    if (usageBusy || controller.signal.aborted) return;
+    usageBusy = true;
+    try {
+      const usage = await readCopilotUsage(usagePath);
+      const cost = priceCopilotUsage(config, usage);
+      if (cost > state.costUsd) state.costUsd = cost;
+      if (state.costUsd > config.caps.maxCostUsd) {
+        state.interruptReason ??= 'budget';
+        controller.abort();
+      }
+    } finally {
+      usageBusy = false;
+    }
+  }, 250);
+  usageTimer.unref();
 
   const progressTimer = setInterval(async () => {
     if (!opts.onProgress || progressBusy) return;
@@ -355,7 +353,7 @@ export async function runCopilotAuthorSession(
     onStdout,
     onStderr,
   });
-  if (usageTimer !== undefined) clearInterval(usageTimer);
+  clearInterval(usageTimer);
   clearInterval(progressTimer);
   if (partialLine.trim()) processEvent(partialLine);
 
@@ -392,10 +390,8 @@ export async function runCopilotAuthorSession(
   if (usage.tokens.input + usage.tokens.output + usage.tokens.cacheRead + usage.tokens.cacheCreation > 0) {
     state.tokens = usage.tokens;
   }
-  if (config.model.priceTable !== undefined) {
-    state.costUsd = Math.max(state.costUsd, priceCopilotUsage(config, usage));
-    if (state.costUsd > config.caps.maxCostUsd) state.interruptReason ??= 'budget';
-  }
+  state.costUsd = Math.max(state.costUsd, priceCopilotUsage(config, usage));
+  if (state.costUsd > config.caps.maxCostUsd) state.interruptReason ??= 'budget';
   const costUsdSdk = usage.costUsd;
   const resultSubtype = outcome.timedOut
     ? 'aborted'

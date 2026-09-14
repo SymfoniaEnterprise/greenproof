@@ -178,20 +178,18 @@ const INIT_PRESETS: Record<string, InitPreset> = {
   },
   copilot: {
     label:
-      'Oficjalny GitHub Copilot CLI (subskrypcja, `copilot login`): gpt-5.6-luna + eskalacja gpt-5.6-terra',
+      'Oficjalny GitHub Copilot CLI (estymata kosztu z usage, `copilot login`): gpt-5.6-luna + eskalacja gpt-5.6-terra',
     driver: 'copilot-cli',
     // Bez baseUrl: Copilot CLI nie jest endpointem OpenAI/Anthropic - routing
     // modeli robi sam GitHub Copilot po zalogowaniu (`copilot login`).
     tokenEnv: 'COPILOT_GITHUB_TOKEN',
     author: 'gpt-5.6-luna',
-    costModel: 'subscription',
+    costModel: 'metered',
     // Bez fixtureAuthorPreference celowo: Copilot nie ma listy /v1/models, więc
     // eskalacja idzie prosto z presetu (źródło 'preset'), bez zapytania o listę.
     fixtureAuthor: { model: 'gpt-5.6-terra' },
-    priceTable: {
-      'gpt-5.6-luna': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
-      'gpt-5.6-terra': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
-    },
+    // Pusta tabela używa total_cost_usd raportowanego przez Copilot CLI.
+    priceTable: {},
     fixtureSessionMaxCostUsd: 1,
     secretsNote:
       'Zaloguj się przez `copilot login` (GitHub Copilot). Token NIE trafia do configu ani .env; COPILOT_GITHUB_TOKEN to tylko nazwa zmiennej dla wariantu bez interaktywnego logowania.',
@@ -334,10 +332,13 @@ export async function cmdInit(args: InitArgs): Promise<InitOutput> {
   const author = args.author ?? preset.author;
   const baseUrl = args.baseUrl ?? preset.baseUrl;
   const tokenEnv = args.tokenEnv ?? preset.tokenEnv;
+  const usesProviderReportedCost = preset.driver === 'copilot-cli' && preset.costModel === 'metered';
 
-  // Zerowy wpis dla nadpisanego modelu: 0 = miękkie capy, realne stawki uzupełnia użytkownik.
+  // Dla providerów bez własnego raportu kosztu zerowy wpis zostawia miękkie capy.
   const priceTable: InitPreset['priceTable'] = { ...preset.priceTable };
-  priceTable[priceTableKey(author)] ??= { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 };
+  if (!usesProviderReportedCost) {
+    priceTable[priceTableKey(author)] ??= { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 };
+  }
 
   const testsRepoDir = resolve(args.testsRepo);
   try {
@@ -387,9 +388,8 @@ export async function cmdInit(args: InitArgs): Promise<InitOutput> {
   const fixtureAuthor = fixture.model;
   const fixtureAuthorSource = fixture.source;
 
-  // Zerowy wpis też dla modelu eskalacji spoza presetu - bez niego sesja
-  // liczona $0, capy by nie gryzły. Ta sama konwencja co przy autorze.
-  if (fixtureAuthor !== undefined) {
+  // Ta sama zasada dotyczy modelu eskalacji spoza presetu.
+  if (fixtureAuthor !== undefined && !usesProviderReportedCost) {
     priceTable[priceTableKey(fixtureAuthor.model)] ??= { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 };
   }
 
@@ -470,6 +470,10 @@ function configSource(input: ConfigSourceInput): string {
     input.driver !== undefined && input.driver !== 'claude-sdk' ? `    driver: ${j(input.driver)},\n` : '';
   const baseUrlLine = input.baseUrl !== undefined ? `    baseUrl: ${j(input.baseUrl)},\n` : '';
   const costModelLine = input.costModel !== undefined ? `    costModel: ${j(input.costModel)},\n` : '';
+  const priceComment =
+    input.driver === 'copilot-cli'
+      ? `    // Pusta tabela używa estymaty total_cost_usd z usage-output-file Copilot CLI.\n`
+      : `    // Stawki 0 = capy kosztowe nie gryzą (zostają tury/czas) - uzupełnij\n    // realne USD/MTok, jeśli chcesz twardego budżetu $.\n`;
   const copilotLines =
     input.driver === 'copilot-cli'
       ? [
@@ -504,9 +508,7 @@ export default {
   model: {
 ${driverLine}${baseUrlLine}    authTokenEnv: ${j(input.tokenEnv)},
     author: ${j(input.author)},
-${costModelLine}${copilotLines}${fixtureLines}    // Stawki 0 = capy kosztowe nie gryzą (zostają tury/czas) - uzupełnij
-    // realne USD/MTok, jeśli chcesz twardego budżetu $.
-    priceTable: {
+${costModelLine}${copilotLines}${fixtureLines}${priceComment}    priceTable: {
 ${priceLines}
     },
   },

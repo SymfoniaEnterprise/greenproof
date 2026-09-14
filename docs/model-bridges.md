@@ -6,10 +6,11 @@ tylko wygodą (budżety kluczy wirtualnych, telemetria, fallbacki). Ten dokument
 opisuje wspierany wzorzec podpięcia takiego endpointu przez bramę oraz
 konfigurację LiteLLM.
 
-> Modele w stylu subskrypcyjnym (GPT-5.6 Luna/Sol/Terra) podpinasz przez
-> **oficjalny GitHub Copilot CLI** (preset `copilot`, patrz
-> [configuration.md](configuration.md)) - to nie jest endpoint HTTP i nie
-> przechodzi przez ten dokument. Poniższy wzorzec dotyczy endpointów mówiących
+> Modele GPT-5.6 Luna/Sol/Terra podpinasz przez **oficjalny GitHub Copilot CLI**
+> (preset `copilot`, patrz [configuration.md](configuration.md)) - to nie jest
+> endpoint HTTP i nie przechodzi przez ten dokument. Dostęp może pochodzić z
+> subskrypcji, ale Greenproof raportuje dla tego presetu estymatę kosztu z usage.
+> Poniższy wzorzec dotyczy endpointów mówiących
 > formatem Anthropic (brama LiteLLM albo własna brama).
 
 > Status: brama jest OPCJONALNA i świadomie trzymana poza core. Core nie zależy

@@ -261,7 +261,7 @@ FLAGI
   --init-only   Dla \`run\`: wykonuje tylko scaffold repo testów i generowanie configu,
                 po czym kończy z kodem 0 (bez preflightu, filtra i sesji).
   --preset <p>  Profil dla konfiguracji: codex-sub | copilot | litellm | claude-sub (domyślnie codex-sub; alias wsteczny).
-                copilot: oficjalny GitHub Copilot CLI (copilot login), gpt-5.6-luna + eskalacja gpt-5.6-terra
+                copilot: oficjalny GitHub Copilot CLI (estymata kosztu z usage, copilot login), gpt-5.6-luna + eskalacja gpt-5.6-terra
                 litellm: brama LiteLLM :4000, model z bramy + eskalacja claude-sonnet-5
                 claude-sub: Claude (subskrypcja z HOME albo API), claude-opus-5
                 codex-sub: stary profil CLIProxyAPI, zachowany dla istniejących komend

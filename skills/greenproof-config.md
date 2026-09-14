@@ -10,7 +10,7 @@ Pełny opis pól: `docs/config-reference.md`. Mostki subskrypcyjne:
 |---|---|---|---|---|
 | `codex-sub` (alias wsteczny, domyślny `init`) | CLIProxyAPI przez mostek OAuth | `http://127.0.0.1:8317` | `CLIPROXY_TOKEN` | istniejące konfiguracje; nowe wybierz jawnie `litellm` albo `copilot` |
 | `litellm` | brama LiteLLM | `http://127.0.0.1:4000` | `LITELLM_KEY` | chcesz budżetów klucza wirtualnego, telemetrii i fallbacków; modele deepseek/lokalne |
-| `copilot` | oficjalne GitHub Copilot CLI (driver `copilot-cli`) | brak | brak (`copilot login`) | masz subskrypcję GitHub Copilot; autor `gpt-5.6-luna`, eskalacja `gpt-5.6-terra`; koszt $ realnie 0 |
+| `copilot` | oficjalne GitHub Copilot CLI (driver `copilot-cli`) | brak | brak (`copilot login`) | autor `gpt-5.6-luna`, eskalacja `gpt-5.6-terra`; koszt estymowany z usage CLI |
 | `claude-sub` | API Anthropic wprost (albo poświadczenia Claude z HOME) | brak | `ANTHROPIC_AUTH_TOKEN` | najmocniejszy autor, koszt liczony realnie |
 
 Gotowe configi referencyjne: `configs/litellm.config.mjs`,

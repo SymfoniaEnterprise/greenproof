@@ -90,6 +90,9 @@ podłącza własne narzędzia i `@playwright/mcp` przez tymczasowy MCP stdio.
 Powłoka procesu jest zablokowana (`--deny-tool=shell`), a host Greenproof robi
 checkpoint commitów po zakończeniu sesji. `authTokenEnv` w tym trybie pozostaje
 tylko polem wspólnego schematu i nie jest wysyłany do endpointu Anthropic.
+Preset Copilota używa `costModel: 'metered'`: koszt runu jest estymowany na
+podstawie `total_cost_usd` zapisanego przez CLI w pliku usage, a nie oznaczany
+automatycznie jako `$0` z subskrypcji.
 
 ## Plik `--in` - wejście komendy
 

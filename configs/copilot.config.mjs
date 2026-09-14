@@ -1,4 +1,4 @@
-// Gotowy config: SUBSKRYPCJA przez oficjalny GitHub Copilot CLI (agent procesowy autora).
+// Gotowy config: estymata kosztu z usage oficjalnego GitHub Copilot CLI.
 // Użycie:
 //   grp run --config configs/copilot.config.mjs \
 //     --in <plan.json> --app-url http://localhost:3132
@@ -30,12 +30,9 @@ export default {
     author: 'gpt-5.6-luna',
     // Eskalacja fixture-author: mocniejszy model z tej samej rodziny.
     fixtureAuthor: { model: 'gpt-5.6-terra' },
-    costModel: 'subscription',
-    // Subskrypcja = realnie $0; zera zostawiają capy tur/czasu jako jedyne.
-    priceTable: {
-      'gpt-5.6-luna': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
-      'gpt-5.6-terra': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
-    },
+    costModel: 'metered',
+    // Pusta tabela używa total_cost_usd raportowanego przez Copilot CLI.
+    priceTable: {},
     copilot: {
       maxAutopilotContinues: 5,
     },
