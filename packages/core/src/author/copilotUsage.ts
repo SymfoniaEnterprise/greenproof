@@ -92,9 +92,11 @@ export function priceCopilotUsage(
   if (config.model.priceTable === undefined) return usage.costUsd;
   const per = 1 / 1_000_000;
   let cost = 0;
+  let hasApplicablePrice = false;
   for (const [model, tokens] of Object.entries(usage.modelUsage)) {
     const price = modelPrice(config, model) ?? modelPrice(config, fallbackModel);
     if (!price) continue;
+    hasApplicablePrice = true;
     cost +=
       tokens.input * price.inPerMTok * per +
       tokens.output * price.outPerMTok * per +
@@ -104,6 +106,7 @@ export function priceCopilotUsage(
   if (Object.keys(usage.modelUsage).length === 0) {
     const price = modelPrice(config, fallbackModel);
     if (price) {
+      hasApplicablePrice = true;
       cost =
         usage.tokens.input * price.inPerMTok * per +
         usage.tokens.output * price.outPerMTok * per +
@@ -111,5 +114,5 @@ export function priceCopilotUsage(
         usage.tokens.cacheCreation * (price.cacheWritePerMTok ?? price.inPerMTok * 1.25) * per;
     }
   }
-  return cost > 0 ? cost : usage.costUsd;
+  return hasApplicablePrice ? cost : usage.costUsd;
 }

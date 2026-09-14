@@ -49,6 +49,7 @@ export async function runCopilotFixtureSession(
       cwd: deps.cwd,
       snapshotMaxChars: deps.config.caps.snapshotMaxChars,
       snapshotGating: deps.config.caps.snapshotGating,
+      includeCopilotCredentials: false,
       playwrightStatePath,
     }),
   );
@@ -167,7 +168,7 @@ export async function runCopilotFixtureSession(
   usageTimer.unref();
   const outcome = await runToCompletion(spawned.command, spawned.args, {
     cwd: deps.cwd,
-    env: copilotEnvironment(),
+    env: copilotEnvironment({ includeCopilotCredentials: false }),
     timeoutMs: deps.config.caps.fixtureSession.maxTimeMinutes * 60_000,
     firstOutputTimeoutMs: deps.config.caps.firstTurnTimeoutMinutes * 60_000,
     firstOutputReady: () => firstTurnSeen,
