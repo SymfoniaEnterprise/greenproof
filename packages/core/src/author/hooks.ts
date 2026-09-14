@@ -32,18 +32,22 @@ const PLAYWRIGHT_TEST_RE =
  */
 const PACKAGE_TEST_RE = /\b(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test\b/;
 
-const NON_MUTATING_BROWSER_TOOLS = new Set([
-  'mcp__playwright__browser_snapshot',
-  'mcp__playwright__browser_find',
-  'mcp__playwright__browser_verify_element_visible',
-  'mcp__playwright__browser_verify_text_visible',
-  'mcp__playwright__browser_verify_list_visible',
-  'mcp__playwright__browser_verify_value',
-  'mcp__playwright__browser_console_messages',
-  'mcp__playwright__browser_network_requests',
-  'mcp__playwright__browser_generate_locator',
-  'mcp__playwright__browser_take_screenshot',
+export const NON_MUTATING_BROWSER_TOOLS = new Set([
+  'browser_snapshot',
+  'browser_find',
+  'browser_verify_element_visible',
+  'browser_verify_text_visible',
+  'browser_verify_list_visible',
+  'browser_verify_value',
+  'browser_console_messages',
+  'browser_network_requests',
+  'browser_generate_locator',
+  'browser_take_screenshot',
 ]);
+
+export function browserToolName(tool: string): string {
+  return tool.replace(/^mcp__playwright__/, '');
+}
 
 /**
  * Po zadziałaniu bezpiecznika dozwolone: formalne zakończenie ORAZ
@@ -147,9 +151,10 @@ export function buildAuthorHooks(
 
     // Śledzenie realnych zmian strony dla bramki snapshotów.
     if (tool.startsWith('mcp__playwright__')) {
-      if (tool === 'mcp__playwright__browser_snapshot') {
+      const browserTool = browserToolName(tool);
+      if (browserTool === 'browser_snapshot') {
         state.pageChangedSinceSnapshot = false;
-      } else if (!NON_MUTATING_BROWSER_TOOLS.has(tool)) {
+      } else if (!NON_MUTATING_BROWSER_TOOLS.has(browserTool)) {
         state.pageChangedSinceSnapshot = true;
       }
     }

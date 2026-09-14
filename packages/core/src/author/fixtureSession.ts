@@ -65,7 +65,7 @@ export interface FixtureContext {
 export interface FixtureSessionResult {
   resultSubtype: string;
   /** Powód przerwania przez NASZE liczniki: cap czasu albo brak startu sesji. */
-  cappedBy?: 'time' | 'infra';
+  cappedBy?: 'time' | 'infra' | 'turns';
   structured?: FixtureSessionOutput;
   costUsd: number;
   turns: number;

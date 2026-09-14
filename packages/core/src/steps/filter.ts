@@ -36,8 +36,14 @@ export function safeCaseId(caseId: string): string {
   return caseId.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
-export function authorBranch(caseId: string): string {
-  return `author/${safeCaseId(caseId)}`;
+/**
+ * Nazwa gałęzi autora wg strategii:
+ * - 'per-case' → `<prefix><safeCaseId(caseId)>` (osobna gałąź na case);
+ * - 'single'   → `<prefix><safeCaseId(slug)>` (jedna gałąź na cały run).
+ */
+export function resolveAuthorBranch(config: GreenproofConfig, caseId: string, slug: string): string {
+  const key = config.authoring.branchStrategy === 'single' ? slug : caseId;
+  return `${config.authoring.branchPrefix}${safeCaseId(key)}`;
 }
 
 export function batchTimeoutMinutes(config: GreenproofConfig, caseCount: number): number {
@@ -51,13 +57,19 @@ function hasAcceptedSpec(specPaths: string[], c: PlanCase): boolean {
   return specPaths.some((p) => p.includes(c.caseId) || p.includes(id));
 }
 
-/** Czy istnieje branch autora z draftem (listFiles na nieznanym refie może rzucić). */
-async function hasDraftBranch(ports: Ports, config: GreenproofConfig, c: PlanCase): Promise<boolean> {
+/**
+ * Czy na gałęzi autora leży już draft specu TEGO case'a (listFiles na nieznanym refie może rzucić).
+ * Filtr po `caseId` w nazwie pliku jest kluczowy dla single-branch: case #2 nie widzi na wspólnej
+ * gałęzi swojego specu (tylko cudze) → poprawnie zostaje `selected`.
+ */
+async function hasDraftBranch(
+  ports: Ports,
+  config: GreenproofConfig,
+  branch: string,
+  c: PlanCase,
+): Promise<boolean> {
   try {
-    const files = await ports.scm.listFiles(
-      authorBranch(c.caseId),
-      `${config.paths.specsDir}/**`,
-    );
+    const files = await ports.scm.listFiles(branch, `${config.paths.specsDir}/**`);
     return files.some((p) => p.includes(c.caseId) || p.includes(safeCaseId(c.caseId)));
   } catch {
     return false;
@@ -95,6 +107,9 @@ export async function runFilter(
   const e2eCases = plan.cases.filter((c) => c.level === 'e2e');
   const specPaths = await ports.scm.listFiles(params.ref, `${config.paths.specsDir}/**`);
 
+  // Nazwa gałęzi autora dla case'a - identyczna dla wszystkich case'ów pod branchStrategy 'single'.
+  const branchFor = (caseId: string) => resolveAuthorBranch(config, caseId, plan.slug);
+
   // Liczniki pominięć - bez nich „skipped: N" wygląda jak awaria, a to deduplikacja.
   const skipPowody = { nieE2e: 0, spec: 0, draft: 0 };
   for (const c of plan.cases) {
@@ -108,12 +123,12 @@ export async function runFilter(
       transitionCase(state, c.caseId, 'skipped');
       continue;
     }
-    if (await hasDraftBranch(ports, config, c)) {
+    if (await hasDraftBranch(ports, config, branchFor(c.caseId), c)) {
       skipPowody.draft += 1;
       transitionCase(state, c.caseId, 'skipped');
       continue;
     }
-    transitionCase(state, c.caseId, 'selected', { branch: authorBranch(c.caseId) });
+    transitionCase(state, c.caseId, 'selected', { branch: branchFor(c.caseId) });
   }
 
   const selectedCount = Object.values(state.cases).filter((c) => c.status === 'selected').length;
@@ -122,7 +137,8 @@ export async function runFilter(
   if (selectedCount === 0 && (skipPowody.spec > 0 || skipPowody.draft > 0)) {
     const czesci: string[] = [];
     if (skipPowody.spec > 0) czesci.push(`${skipPowody.spec} z zaakceptowanym specem w ${config.paths.specsDir}/`);
-    if (skipPowody.draft > 0) czesci.push(`${skipPowody.draft} z draftem na branchu author/<caseId>`);
+    if (skipPowody.draft > 0)
+      czesci.push(`${skipPowody.draft} z draftem na gałęzi autora (${config.authoring.branchPrefix}*)`);
     warnings.push(
       `Nic do zrobienia - wszystkie case'y E2E są już pokryte w repo testów (${czesci.join(', ')}). ` +
         'To celowa deduplikacja: nie płacimy drugi raz za gotową pracę. Świeży przebieg: wskaż inne repo testów ' +

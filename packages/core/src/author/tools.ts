@@ -53,6 +53,9 @@ export function createGreenproofTools(deps: ToolDeps) {
   const caps = config.caps;
   const pw = config.playwright;
   const fuse = caps.seedFuse;
+  const greenproofTool = (name: string): string =>
+    config.model.driver === 'copilot-cli' ? `greenproof-${name}` : `mcp__greenproof__${name}`;
+  const finishTool = greenproofTool('finish');
 
   const markPhase = tool(
     'mark_phase',
@@ -95,7 +98,7 @@ export function createGreenproofTools(deps: ToolDeps) {
           .map((s) => s.strategy)
           .join(', ')})`;
         return text(
-          'STOP - bezpiecznik seedu. Wyczerpałeś limit strategii doprowadzenia stanu. NIE próbuj kolejnych podejść. Natychmiast wywołaj mcp__greenproof__finish ze statusem "blocked" i notatką fixture-gap opisującą, jakiego POM/fixture\'a brakuje, po czym zakończ turę.',
+          `STOP - bezpiecznik seedu. Wyczerpałeś limit strategii doprowadzenia stanu. NIE próbuj kolejnych podejść. Natychmiast wywołaj ${finishTool} ze statusem "blocked" i notatką fixture-gap opisującą, jakiego POM/fixture\'a brakuje, po czym zakończ turę.`,
         );
       }
       return text(
@@ -553,11 +556,12 @@ export function createGreenproofTools(deps: ToolDeps) {
       // „zakończ sesję" dosłownie i skończył turę bez `finish` - 9 minut pracy
       // i gotowy dowód do kosza. Ścieżki STOP niżej nazywają `finish` od zawsze;
       // ścieżka SUKCESU, jedyna prowadząca do `delivered`, jako jedyna nie.
+      const finishInstructions =
+        config.model.driver === 'copilot-cli'
+          ? `(1) przywróć wersję sprzed mutacji (git diff musi być pusty), (2) wywołaj ${finishTool} ze statusem "delivered"`
+          : `(1) przywróć wersję sprzed mutacji (git diff musi być pusty), (2) zrób commit końcowy, (3) wywołaj ${finishTool} ze statusem "delivered"`;
       return text(
-        'Surowiec dowodu zapisany. Teraz po kolei: (1) przywróć wersję sprzed mutacji (git diff musi być pusty), ' +
-          '(2) zrób commit końcowy, (3) wywołaj mcp__greenproof__finish ze statusem "delivered", ' +
-          'ścieżką specu w specPath i listą reusedPoms. Bez tego wywołania próba przepada jako nieudana, ' +
-          'choćby dowód był kompletny. Dopiero po `finish` zakończ turę.',
+        `Surowiec dowodu zapisany. Teraz po kolei: ${finishInstructions}, ścieżką specu w specPath i listą reusedPoms. Bez tego wywołania próba przepada jako nieudana, choćby dowód był kompletny. Dopiero po \`finish\` zakończ turę.`,
       );
     },
   );

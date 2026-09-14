@@ -175,6 +175,10 @@ export interface RunOptions {
   onStderr?: (chunk: string) => void;
   /** Twardy watchdog startu; osobny od limitu całej sesji. */
   firstOutputTimeoutMs?: number;
+  /** Dla sesji strumieniowych: dane są wyjściem dopiero po spełnieniu predykatu. */
+  firstOutputReady?: () => boolean;
+  /** Zewnętrzny kill switch, np. cap tur sesji Copilot. */
+  abortSignal?: AbortSignal;
 }
 
 /** Żywe drzewa procesów - do sprzątnięcia, gdy host dostanie sygnał. */
@@ -268,12 +272,13 @@ export function runToCompletion(
     let firstOutputSeen = false;
     let firstOutputTimer: ReturnType<typeof setTimeout> | undefined;
     const markOutput = (chunk: Buffer | string, callback?: (value: string) => void): void => {
+      callback?.(chunk.toString());
+      if (firstOutputSeen || (opts.firstOutputReady !== undefined && !opts.firstOutputReady())) return;
       firstOutputSeen = true;
       if (firstOutputTimer !== undefined) {
         clearTimeout(firstOutputTimer);
         firstOutputTimer = undefined;
       }
-      callback?.(chunk.toString());
     };
 
     try {
@@ -281,7 +286,7 @@ export function runToCompletion(
         cwd: opts.cwd,
         env: opts.env,
         stdio: opts.onStdout !== undefined || opts.onStderr !== undefined
-          ? ['ignore', 'pipe', 'pipe']
+          ? ['ignore', opts.onStdout !== undefined ? 'pipe' : 'ignore', opts.onStderr !== undefined ? 'pipe' : 'ignore']
           : 'ignore',
         // POSIX: własna grupa procesów, żeby dało się ubić CAŁE drzewo.
         detached: !isWindows(),
@@ -320,23 +325,43 @@ export function runToCompletion(
       firstOutputTimer.unref();
     }
 
-    const softKill = setTimeout(() => {
+    let softKill: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
       timedOut = true;
       killTree(child, 'SIGTERM');
       hardKill = setTimeout(() => killTree(child, 'SIGKILL'), HARD_KILL_DELAY_MS);
       hardKill.unref();
     }, opts.timeoutMs);
+    softKill.unref();
 
     let settled = false;
+    const abortChild = (): void => {
+      if (settled) return;
+      if (softKill !== undefined) {
+        clearTimeout(softKill);
+        softKill = undefined;
+      }
+      killTree(child, 'SIGTERM');
+      hardKill = setTimeout(() => killTree(child, 'SIGKILL'), HARD_KILL_DELAY_MS);
+      hardKill.unref();
+    };
     const settle = (outcome: RunOutcome): void => {
       if (settled) return;
       settled = true;
-      clearTimeout(softKill);
+      if (softKill !== undefined) clearTimeout(softKill);
       if (hardKill !== undefined) clearTimeout(hardKill);
       if (firstOutputTimer !== undefined) clearTimeout(firstOutputTimer);
+      if (opts.abortSignal !== undefined && abortListener !== undefined) {
+        opts.abortSignal.removeEventListener('abort', abortListener);
+      }
       liveTrees.delete(child);
       resolve({ ...outcome, ...(timedOutBeforeOutput ? { timedOutBeforeOutput: true } : {}) });
     };
+
+    const abortListener = (): void => abortChild();
+    if (opts.abortSignal !== undefined) {
+      if (opts.abortSignal.aborted) abortChild();
+      else opts.abortSignal.addEventListener('abort', abortListener, { once: true });
+    }
 
     child.once('error', (err) => {
       settle({

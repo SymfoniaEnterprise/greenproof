@@ -87,9 +87,9 @@ export async function runClean(ports: Ports, params: CleanParams): Promise<Clean
     }
   }
 
-  // Branche: praca released case'ów jest zmergowana przez PR (accept), ich
-  // author/<caseId> to osad historii. Ref fixtures wolno usunąć, gdy ŻADEN
-  // case nie będzie z niego ciął nowych branchy.
+  // Branche: praca released case'ów jest zmergowana przez PR (accept), ich gałąź autora
+  // (author/<caseId> per-case, wspólna author/<slug> pod 'single') to osad historii. Ref fixtures
+  // oraz wspólną gałąź wolno usunąć, gdy ŻADEN case nie będzie z nich ciął nowej pracy.
   const dryRun = params.dryRun ?? false;
   const deletedBranches: string[] = [];
   let branchNote: string | undefined;
@@ -99,11 +99,22 @@ export async function runClean(ports: Ports, params: CleanParams): Promise<Clean
         'platforma nie wspiera usuwania branchy (ScmPort.deleteBranch) - ich cyklem życia zarządza platforma';
       ports.logger.warn(`Clean ${params.runId}: ${branchNote}`);
     } else {
-      const candidates: string[] = [];
-      for (const cs of cases) {
-        if (cs.status === 'released' && cs.branch !== undefined) candidates.push(cs.branch);
-      }
       const TERMINAL: readonly CaseStatus[] = ['released', 'skipped', 'failed'];
+      // Gałęzie, których wciąż potrzebuje NIEterminalny case (pod 'single' to wspólna gałąź runu) -
+      // liczone po WSZYSTKICH case'ach runu, nie po filtrze --cases.
+      const inUse = new Set(
+        Object.values(loaded.state.cases)
+          .filter((c) => !TERMINAL.includes(c.status) && c.branch !== undefined)
+          .map((c) => c.branch as string),
+      );
+      // Dedup: pod 'single' N released case'ów wskazuje TĘ SAMĄ gałąź. Nie usuwaj gałęzi w użyciu.
+      const candidates: string[] = [
+        ...new Set(
+          cases
+            .filter((c) => c.status === 'released' && c.branch !== undefined)
+            .map((c) => c.branch as string),
+        ),
+      ].filter((b) => !inUse.has(b));
       const runTerminal = Object.values(loaded.state.cases).every((c) => TERMINAL.includes(c.status));
       if (runTerminal) {
         if (loaded.state.fixturesRef !== undefined) candidates.push(loaded.state.fixturesRef);

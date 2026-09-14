@@ -90,4 +90,10 @@ describe('authorSystemPrompt - uruchamianie testów', () => {
     expect(p).not.toContain('mcp__greenproof__');
     expect(p).toContain('Nie wykonuj commitów ani push');
   });
+
+  it('copilot-cli: kill switch legacy nie przełącza promptu na zablokowany shell', () => {
+    const p = authorSystemPrompt(withEnforce(false, 'copilot-cli'), ctx([]));
+    expect(p).toContain('greenproof-run_playwright');
+    expect(p).not.toContain('uruchamiaj `playwright test` i');
+  });
 });

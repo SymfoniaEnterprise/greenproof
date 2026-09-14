@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import type { GreenproofConfig } from '../config/types.js';
+import type { AuthorPhase } from '../domain/attempt.js';
 import type { CaseContext } from '../steps/triage.js';
 import { AuthorSessionState } from './state.js';
 
@@ -11,6 +12,12 @@ export interface CopilotMcpBootstrap {
   runId: string;
   statePath: string;
   progressPath?: string;
+  parentStatePath?: string;
+}
+
+export interface CopilotParentState {
+  turns: number;
+  turnsByPhase: Record<AuthorPhase, number>;
 }
 
 export interface SerializedAuthorSessionState extends Omit<AuthorSessionState, 'filesTouched'> {

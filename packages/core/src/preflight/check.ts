@@ -6,6 +6,7 @@
  */
 import type { GreenproofConfig } from '../config/types.js';
 import type { SecretsPort } from '../ports/index.js';
+import { copilotEnvironment } from '../author/copilotEnvironment.js';
 import { runToCompletion, spawnArgv } from '../util/exec.js';
 
 export interface PreflightResult {
@@ -169,15 +170,20 @@ async function runCopilotCliPreflight(
   const started = Date.now();
   const outcome = await runToCompletion(spawned.command, spawned.args, {
     cwd: process.cwd(),
-    env: process.env,
+    env: copilotEnvironment(),
     timeoutMs: Math.min(timeoutMs, 15_000),
     ...spawned.options,
     onStdout: (chunk) => output.push(chunk),
     onStderr: (chunk) => output.push(chunk),
   });
+  const exitError = outcome.exitCode === 0
+    ? undefined
+    : outcome.signal !== null
+      ? `Copilot CLI zakończył się sygnałem ${outcome.signal}.`
+      : `Copilot CLI zakończył się kodem ${String(outcome.exitCode)}.`;
   const error = outcome.spawnError?.message ??
     (outcome.timedOut ? 'Copilot CLI nie odpowiedział w limicie czasu.' : undefined) ??
-    (outcome.exitCode === 0 ? undefined : `Copilot CLI zakończył się kodem ${String(outcome.exitCode)}.`);
+    exitError;
   const ok = error === undefined;
   const latencyMs = Date.now() - started;
   const note = ok

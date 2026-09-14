@@ -86,7 +86,7 @@ export type KnowledgeArgs = Pick<CommandArgs, 'config' | 'input'>;
 /* --------------------------------------------------------------------- init */
 
 export interface InitArgs {
-  /** Gotowy profil (copilot | litellm | claude-sub). */
+  /** Gotowy profil (codex-sub | copilot | litellm | claude-sub). */
   preset?: string;
   testsRepo?: string;
   /** Docelowy plik konfiguracyjny. */
@@ -161,6 +161,21 @@ interface InitPreset {
  * więc dowolna kombinacja nie wymaga ręcznej edycji pliku.
  */
 const INIT_PRESETS: Record<string, InitPreset> = {
+  // Zachowana nazwa i konfiguracja sprzed wprowadzenia drivera Copilot CLI.
+  'codex-sub': {
+    label: 'CLIProxyAPI (subskrypcja przez mostek OAuth): gpt-5.6-luna(max) + eskalacja gpt-5.6-sol(high)',
+    tokenEnv: 'CLIPROXY_TOKEN',
+    baseUrl: 'http://127.0.0.1:8317',
+    author: 'gpt-5.6-luna(max)',
+    fixtureAuthor: { model: 'gpt-5.6-sol(high)' },
+    fixtureAuthorPreference: ['gpt-5.6-sol(high)', 'gpt-5.6-luna(max)'],
+    priceTable: {
+      'gpt-5.6-luna': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
+      'gpt-5.6-sol': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
+    },
+    fixtureSessionMaxCostUsd: 1,
+    secretsNote: 'Ustaw CLIPROXY_TOKEN w środowisku procesu.',
+  },
   copilot: {
     label:
       'Oficjalny GitHub Copilot CLI (subskrypcja, `copilot login`): gpt-5.6-luna + eskalacja gpt-5.6-terra',
@@ -305,7 +320,7 @@ function pickPreferred(preference: string[], available: string[]): string | unde
  * był przenośny między katalogiem configu a repo testów.
  */
 export async function cmdInit(args: InitArgs): Promise<InitOutput> {
-  const presetName = args.preset ?? 'litellm';
+  const presetName = args.preset ?? 'codex-sub';
   const preset = INIT_PRESETS[presetName];
   if (preset === undefined) {
     throw new CliError(
@@ -517,6 +532,11 @@ ${priceLines}
     timeoutPerCaseMin: 25,
     timeoutCapMin: 340,
     splitWarnAt: 12,
+  },
+  // branchStrategy: 'single' = jedna gałąź autora na cały run (author/<slug>) zamiast per-case.
+  authoring: {
+    branchStrategy: 'per-case',
+    branchPrefix: 'author/',
   },
   playwright: {
     command: ['npx', 'playwright', 'test'],

@@ -4,7 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createGreenproofTools } from './tools.js';
 import { AuthorSessionState } from './state.js';
-import type { CopilotMcpBootstrap } from './stateTransfer.js';
+import type { CopilotMcpBootstrap, CopilotParentState } from './stateTransfer.js';
 import { writeAuthorSessionState } from './stateTransfer.js';
 
 async function loadBootstrap(): Promise<CopilotMcpBootstrap> {
@@ -26,6 +26,19 @@ async function main(): Promise<void> {
       bootstrap.statePath,
       JSON.stringify({ ...state, filesTouched: [...state.filesTouched] }, null, 2),
     );
+  };
+
+  const syncParentState = async (): Promise<void> => {
+    if (bootstrap.parentStatePath === undefined) return;
+    try {
+      const parent = JSON.parse(await readFile(bootstrap.parentStatePath, 'utf8')) as CopilotParentState;
+      state.turns = Math.max(state.turns, parent.turns);
+      for (const phase of ['arrange', 'act', 'assert'] as const) {
+        state.turnsByPhase[phase] = Math.max(state.turnsByPhase[phase], parent.turnsByPhase[phase] ?? 0);
+      }
+    } catch {
+      /* The parent may not have written the first turn yet. */
+    }
   };
 
   const onProgress = bootstrap.progressPath
@@ -63,6 +76,15 @@ async function main(): Promise<void> {
         inputSchema: definition.inputSchema as Record<string, unknown>,
       },
       async (args: unknown, extra: unknown) => {
+        await syncParentState();
+        if (state.fuseTripped && definition.name !== 'finish' && definition.name !== 'report_seed_attempt') {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: 'Bezpiecznik seedu przerwał pracę - wywołaj narzędzie finish ze statusem blocked.',
+            }],
+          };
+        }
         const result = await handler(args, extra);
         await persist();
         return result as never;
@@ -71,8 +93,14 @@ async function main(): Promise<void> {
   }
 
   await persist();
-  process.on('SIGTERM', persistSync);
-  process.on('SIGINT', persistSync);
+  process.once('SIGTERM', () => {
+    persistSync();
+    process.exit(143);
+  });
+  process.once('SIGINT', () => {
+    persistSync();
+    process.exit(130);
+  });
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

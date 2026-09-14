@@ -82,6 +82,8 @@ export interface PipelineState {
    * baseRef. Po pierwszej sesji prewencyjnej branche case'ów wychodzą z niego.
    */
   fixturesRef?: string;
+  /** URL/ref PR-a wspólnej gałęzi pod authoring.branchStrategy 'single' - otwierany raz na run. */
+  runPrUrl?: string;
   /** Identyfikator "miejsca rozmowy" z człowiekiem (nr issue / id zadania platformy). */
   runRef: string;
   createdAt: string;

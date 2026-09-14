@@ -143,7 +143,8 @@ kroków w CI.
   w katalogu z `GREENPROOF_TESTS_REPO` (pierwszy trafiony wygrywa) i loguje,
   który plik wybrał i skąd.
 - `run --tests-repo <p> --init-only [--preset litellm|claude-sub|copilot]` - generuje
-  `<tests-repo>/greenproof.config.mjs` (domyślny preset: `litellm`);
+  `<tests-repo>/greenproof.config.mjs` (domyślny preset: `codex-sub`, zachowany
+  dla kompatybilności; nowe konfiguracje mogą użyć `litellm`);
   `--config <p>` zmienia cel, a `--force` pozwala nadpisać istniejący plik.
 - `--author` / `--base-url` / `--token-env` / `--fixture-author <model>|auto|none`
   - nadpisania pól presetu (`run --init-only`, oraz `run` przy pierwszorazowej

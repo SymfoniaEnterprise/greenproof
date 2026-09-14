@@ -8,7 +8,8 @@ Pełny opis pól: `docs/config-reference.md`. Mostki subskrypcyjne:
 
 | Preset | Kanał | `baseUrl` | Token (`authTokenEnv`) | Kiedy |
 |---|---|---|---|---|
-| `litellm` (domyślny) | brama LiteLLM | `http://127.0.0.1:4000` | `LITELLM_KEY` | chcesz budżetów klucza wirtualnego, telemetrii i fallbacków; modele deepseek/lokalne |
+| `codex-sub` (alias wsteczny, domyślny `init`) | CLIProxyAPI przez mostek OAuth | `http://127.0.0.1:8317` | `CLIPROXY_TOKEN` | istniejące konfiguracje; nowe wybierz jawnie `litellm` albo `copilot` |
+| `litellm` | brama LiteLLM | `http://127.0.0.1:4000` | `LITELLM_KEY` | chcesz budżetów klucza wirtualnego, telemetrii i fallbacków; modele deepseek/lokalne |
 | `copilot` | oficjalne GitHub Copilot CLI (driver `copilot-cli`) | brak | brak (`copilot login`) | masz subskrypcję GitHub Copilot; autor `gpt-5.6-luna`, eskalacja `gpt-5.6-terra`; koszt $ realnie 0 |
 | `claude-sub` | API Anthropic wprost (albo poświadczenia Claude z HOME) | brak | `ANTHROPIC_AUTH_TOKEN` | najmocniejszy autor, koszt liczony realnie |
 
@@ -52,6 +53,12 @@ curl -s http://127.0.0.1:4000/v1/models -H "Authorization: Bearer $LITELLM_KEY"
 ## 3. Zmiana providera
 
 Provider = para `baseUrl` + `authTokenEnv` (flagi `--base-url`, `--token-env`).
+
+Dla `model.driver: 'copilot-cli'` ta sekcja nie ma zastosowania: Copilot CLI
+nie używa endpointu Anthropic, `authTokenEnv` ani `/v1/models`. Użyj
+`copilot login`, wybierz model dostępny w lokalnym CLI, a następnie uruchom
+`grp preflight --config <config>` - preflight sprawdzi binarkę i podstawowy
+start CLI, nie ping endpointu.
 
 Wymóg endpointu: **format Anthropic `/v1/messages` z działającym `tool_use`**.
 LiteLLM nigdy nie był wymogiem - wymogiem jest ten kontrakt. Dlatego po KAŻDEJ
@@ -164,6 +171,13 @@ ograniczeniem kosztu. Najpierw diagnoza z ledgera.
   `GREENPROOF_SKIP_INSTALL` - opis w `docs/configuration.md` i `README.md`.
 
 ## 9. Checklista przed pierwszym runem na nowym modelu
+
+Dla `model.driver: 'copilot-cli'` wykonaj tylko:
+
+1. `copilot login` i sprawdzenie, że model jest dostępny w lokalnym model pickerze.
+2. `grp preflight --config <c>` → exit 0; nie konfiguruj `grp models`, tokenu Anthropic ani `baseUrl`.
+
+Dla drivera Claude/endpointu Anthropic użyj pełnej checklisty:
 
 1. Model widoczny w `grp models` (lista `/v1/models` providera).
 2. `author` (i ewentualny `fixtureAuthor`) ustawiony flagą albo w oznaczonym

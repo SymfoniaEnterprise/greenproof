@@ -22,7 +22,7 @@ export function authorSystemPrompt(config: GreenproofConfig, context: CaseContex
     `Jesteś agentem-autorem testów E2E (Playwright, TypeScript). Pracujesz w repo testów nad JEDNYM przypadkiem testowym. Twoim wynikiem jest draft speca, który realnie weryfikuje wymóg - nie zielony przebieg za wszelką cenę.`,
   );
 
-  const enforceTool = caps.enforceRunPlaywrightTool;
+  const enforceTool = caps.enforceRunPlaywrightTool || config.model.driver === 'copilot-cli';
 
   sections.push(
     [
@@ -104,7 +104,7 @@ export function authorSystemPrompt(config: GreenproofConfig, context: CaseContex
     sections.push(
       [
         '## UWAGA: case typu churn-prone (bezpiecznik seedu aktywny)',
-        `Masz ${caps.seedFuse.maxFailedStrategies} RÓŻNE strategie seedu i ~${caps.seedFuse.maxArrangeTurns} tur fazy arrange. Raportuj każdą przez report_seed_attempt.`,
+        `Masz ${caps.seedFuse.maxFailedStrategies} RÓŻNE strategie seedu i ~${caps.seedFuse.maxArrangeTurns} tur fazy arrange. Raportuj każdą przez ${reportSeedAttempt}.`,
         'Gdy bezpiecznik przerwie pracę - natychmiast zakończ ze statusem blocked i notatką fixture-gap (czego brakuje, co powinien dopisać człowiek). NIE walcz dalej.',
       ].join('\n'),
     );

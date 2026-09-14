@@ -259,10 +259,11 @@ FLAGI
                 katalogu z GREENPROOF_TESTS_REPO.
   --init-only   Dla \`run\`: wykonuje tylko scaffold repo testów i generowanie configu,
                 po czym kończy z kodem 0 (bez preflightu, filtra i sesji).
-  --preset <p>  Profil dla konfiguracji: copilot | litellm | claude-sub (domyślnie litellm).
+  --preset <p>  Profil dla konfiguracji: codex-sub | copilot | litellm | claude-sub (domyślnie codex-sub; alias wsteczny).
                 copilot: oficjalny GitHub Copilot CLI (copilot login), gpt-5.6-luna + eskalacja gpt-5.6-terra
                 litellm: brama LiteLLM :4000, model z bramy + eskalacja claude-sonnet-5
                 claude-sub: Claude (subskrypcja z HOME albo API), claude-opus-5
+                codex-sub: stary profil CLIProxyAPI, zachowany dla istniejących komend
   --tests-repo <p> Repozytorium git testów. Cel konfiguracji lub kotwica do
                 <p>/greenproof.config.mjs. Z jawnym --config ustawia GREENPROOF_TESTS_REPO.
   --author <m>  Nadpisuje model autora z presetu.

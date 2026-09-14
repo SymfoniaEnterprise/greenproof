@@ -71,6 +71,8 @@ export const PipelineStateSchema = z.object({
   baseRef: z.string().min(1),
   /** Branch z prewencyjnymi fixture'ami - baza branchy case'ów, gdy powstał. */
   fixturesRef: z.string().min(1).exactOptional(),
+  /** URL/ref PR-a wspólnej gałęzi pod authoring.branchStrategy 'single' - otwierany raz na run. */
+  runPrUrl: z.string().min(1).exactOptional(),
   runRef: z.string().min(1),
   createdAt: z.iso.datetime({ offset: true }),
   cases: z.record(z.string(), CaseStateSchema),

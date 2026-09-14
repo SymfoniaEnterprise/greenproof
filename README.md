@@ -291,7 +291,8 @@ Presety providerów, flagi, wejście komend i zmienne środowiskowe:
 ustawienie w configu: [docs/config-reference.md](docs/config-reference.md).
 
 - `grp run --tests-repo <p> --init-only [--preset litellm|claude-sub|copilot]` -
-  generuje config (domyślny preset: `litellm`); każde pole modelu nadpiszesz flagą
+  generuje config (domyślny preset: `codex-sub`, zachowany alias wsteczny; nowe
+  konfiguracje mogą użyć `litellm`); każde pole modelu nadpiszesz flagą
   (`--author`, `--base-url`, `--token-env`, `--fixture-author <model>|none`).
 - `grp run` - preflight → filter → triage → fixture → author → deliver →
   auto-accept w jednym procesie; `release` to osobna, świadoma decyzja
