@@ -49,6 +49,7 @@ export async function runCopilotFixtureSession(
       cwd: deps.cwd,
       snapshotMaxChars: deps.config.caps.snapshotMaxChars,
       snapshotGating: deps.config.caps.snapshotGating,
+      includeCopilotCredentials: false,
       playwrightStatePath,
     }),
   );

@@ -226,6 +226,7 @@ export async function runCopilotAuthorSession(
       cwd: opts.cwd,
       snapshotMaxChars: config.caps.snapshotMaxChars,
       snapshotGating: config.caps.snapshotGating,
+      includeCopilotCredentials: false,
       authorStatePath: statePath,
       playwrightStatePath,
     }),

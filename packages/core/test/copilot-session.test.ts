@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { EnvSecrets, TestLogger } from '@greenproof/testing';
@@ -21,6 +21,12 @@ const serverName = config.mcpServers.greenproof ? 'greenproof' : 'greenproof-fix
 const greenproof = config.mcpServers[serverName];
 const bootstrapArg = greenproof.args.indexOf('--bootstrap');
 const bootstrap = JSON.parse(readFileSync(greenproof.args[bootstrapArg + 1], 'utf8'));
+if (serverName === 'greenproof-fixture') {
+  writeFileSync(
+    join(bootstrap.attemptDir, 'fake-copilot-env.json'),
+    JSON.stringify({ copilotGithubToken: process.env.COPILOT_GITHUB_TOKEN ?? null }),
+  );
+}
 const mode = bootstrap.attemptDir ? readFileSync(join(bootstrap.attemptDir, 'fake-mode'), 'utf8').trim() : 'success';
 const usageArg = process.argv.find((arg) => arg.startsWith('--usage-output-file='));
 const finishArguments = serverName === 'greenproof'
@@ -177,7 +183,7 @@ async function runFixtureFake(mode: 'success' | 'error', launcher: string, maxCo
     },
     paths: { testsRepoDir: cwd },
   });
-  return runCopilotFixtureSession({
+  const result = await runCopilotFixtureSession({
     config,
     context: fixtureContext(),
     secrets: new EnvSecrets(),
@@ -187,6 +193,7 @@ async function runFixtureFake(mode: 'success' | 'error', launcher: string, maxCo
     runId: 'r-copilot-fixture-test',
     attempt: 0,
   });
+  return { result, attemptDir };
 }
 
 describe('runCopilotAuthorSession - granica CLI/MCP', () => {
@@ -213,7 +220,7 @@ describe('runCopilotAuthorSession - granica CLI/MCP', () => {
   it('fixture-author odtwarza wynik i koszt z osobnego serwera MCP', async () => {
     const root = await mkdtemp(join(tmpdir(), 'gp-fake-copilot-'));
     const launcher = await makeLauncher(root);
-    const result = await runFixtureFake('success', launcher);
+    const { result } = await runFixtureFake('success', launcher);
 
     expect(result.resultSubtype).toBe('success');
     expect(result.costUsd).toBeCloseTo(0.25);
@@ -226,7 +233,7 @@ describe('runCopilotAuthorSession - granica CLI/MCP', () => {
   it('fixture-author nie dostarcza stanu po niezerowym wyjściu CLI', async () => {
     const root = await mkdtemp(join(tmpdir(), 'gp-fake-copilot-'));
     const launcher = await makeLauncher(root);
-    const result = await runFixtureFake('error', launcher);
+    const { result } = await runFixtureFake('error', launcher);
 
     expect(result.resultSubtype).toBe('error_during_execution');
     expect(result.structured).toBeUndefined();
@@ -236,11 +243,34 @@ describe('runCopilotAuthorSession - granica CLI/MCP', () => {
   it('fixture-author klasyfikuje przekroczenie kosztu jako budget', async () => {
     const root = await mkdtemp(join(tmpdir(), 'gp-fake-copilot-'));
     const launcher = await makeLauncher(root);
-    const result = await runFixtureFake('success', launcher, 0.1);
+    const { result } = await runFixtureFake('success', launcher, 0.1);
 
     expect(result.resultSubtype).toBe('aborted');
     expect(result.cappedBy).toBe('budget');
     expect(result.structured).toBeUndefined();
+  });
+
+  it('fixture-author zachowuje token Copilota, a bootstrap Playwrighta go odcina', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'gp-fake-copilot-'));
+    const launcher = await makeLauncher(root);
+    const previousToken = process.env.COPILOT_GITHUB_TOKEN;
+    process.env.COPILOT_GITHUB_TOKEN = 'fixture-token';
+    try {
+      const { result, attemptDir } = await runFixtureFake('success', launcher);
+      const childEnv = JSON.parse(await readFile(join(attemptDir, 'fake-copilot-env.json'), 'utf8')) as {
+        copilotGithubToken?: string | null;
+      };
+      const playwrightBootstrap = JSON.parse(
+        await readFile(join(attemptDir, 'copilot-fixture-playwright-bootstrap.json'), 'utf8'),
+      ) as { includeCopilotCredentials?: boolean };
+
+      expect(result.resultSubtype).toBe('success');
+      expect(childEnv.copilotGithubToken).toBe('fixture-token');
+      expect(playwrightBootstrap.includeCopilotCredentials).toBe(false);
+    } finally {
+      if (previousToken === undefined) delete process.env.COPILOT_GITHUB_TOKEN;
+      else process.env.COPILOT_GITHUB_TOKEN = previousToken;
+    }
   });
 
 });

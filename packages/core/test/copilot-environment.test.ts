@@ -1,8 +1,8 @@
 /**
  * Regresja: `copilotEnvironment()` musi przekazać podprocesowi Copilot CLI
- * KOMPLETNE środowisko systemowe (na Windowsie brak bazy systemowej wieszał
- * `copilot --version` do timeoutu preflightu/sesji autora), wycinając wyłącznie
- * poświadczenia i kanały IPC Claude/Anthropic.
+ * KOMPLETNE środowisko systemowe (na Windowsie brak bazy systemowej wiesza
+ * `copilot --version` do timeoutu preflightu/sesji autora), bez dziedziczenia
+ * sekretów niezwiązanych z Copilotem.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { copilotEnvironment } from '../src/author/copilotEnvironment.js';
@@ -14,21 +14,35 @@ afterEach(() => {
 });
 
 describe('copilotEnvironment', () => {
-  it('przekazuje dowolne zmienne bazowe i tokeny copilota (nie tylko wąską allowlistę)', () => {
-    // Klucze próbne o unikatowej nazwie - omijają case-insensitivity process.env
-    // na Windowsie (SystemRoot vs SYSTEMROOT) i dowodzą passthrough dla zmiennych
-    // spoza dawnej allowlisty.
-    process.env['GP_SYS_PROBE'] = 'sys-value';
-    process.env['GP_ANOTHER_PROBE'] = 'another';
+  it('przekazuje bazę systemową i jawnie dozwolone tokeny Copilota', () => {
+    process.env['PATH'] = 'path-value';
+    process.env['SystemRoot'] = 'system-root';
     process.env['GH_TOKEN'] = 'gh-abc';
     process.env['COPILOT_GITHUB_TOKEN'] = 'cop-xyz';
+    process.env['LITELLM_KEY'] = 'litellm-secret';
+    process.env['CLIPROXY_TOKEN'] = 'cliproxy-secret';
 
     const env = copilotEnvironment();
 
-    expect(env['GP_SYS_PROBE']).toBe('sys-value');
-    expect(env['GP_ANOTHER_PROBE']).toBe('another');
+    expect(env['PATH']).toBe('path-value');
+    const systemRootKey = Object.keys(env).find((key) => key.toUpperCase() === 'SYSTEMROOT');
+    expect(systemRootKey === undefined ? undefined : env[systemRootKey]).toBe('system-root');
     expect(env['GH_TOKEN']).toBe('gh-abc');
     expect(env['COPILOT_GITHUB_TOKEN']).toBe('cop-xyz');
+    expect(env['LITELLM_KEY']).toBeUndefined();
+    expect(env['CLIPROXY_TOKEN']).toBeUndefined();
+  });
+
+  it('przekazuje konfigurację proxy do podprocesów sieciowych', () => {
+    process.env['HTTP_PROXY'] = 'http://proxy.example:8080';
+    process.env['HTTPS_PROXY'] = 'http://proxy.example:8080';
+    process.env['NO_PROXY'] = 'localhost,127.0.0.1';
+
+    const env = copilotEnvironment();
+
+    expect(env['HTTP_PROXY']).toBe('http://proxy.example:8080');
+    expect(env['HTTPS_PROXY']).toBe('http://proxy.example:8080');
+    expect(env['NO_PROXY']).toBe('localhost,127.0.0.1');
   });
 
   it('wycina poświadczenia i IPC Claude/Anthropic', () => {
@@ -45,6 +59,28 @@ describe('copilotEnvironment', () => {
     expect(env['CLAUDE_CODE_MESSAGING_TOKEN']).toBeUndefined();
     expect(env['CLAUDE_EFFORT']).toBeUndefined();
     expect(env['CLAUDECODE']).toBeUndefined();
+  });
+
+  it('fixture mode omits także credentials Copilota', () => {
+    process.env['GH_TOKEN'] = 'gh-abc';
+    process.env['GITHUB_TOKEN'] = 'github-abc';
+    process.env['COPILOT_GITHUB_TOKEN'] = 'cop-xyz';
+
+    const env = copilotEnvironment({ includeCopilotCredentials: false });
+
+    expect(env['GH_TOKEN']).toBeUndefined();
+    expect(env['GITHUB_TOKEN']).toBeUndefined();
+    expect(env['COPILOT_GITHUB_TOKEN']).toBeUndefined();
+  });
+
+  it('porównuje nazwy zmiennych bez rozróżniania wielkości liter', () => {
+    process.env['anthropic_lower_probe'] = 'secret';
+    process.env['claude_lower_probe'] = 'secret';
+
+    const env = copilotEnvironment();
+
+    expect(env['anthropic_lower_probe']).toBeUndefined();
+    expect(env['claude_lower_probe']).toBeUndefined();
   });
 
   it('pomija zmienne o wartości undefined', () => {

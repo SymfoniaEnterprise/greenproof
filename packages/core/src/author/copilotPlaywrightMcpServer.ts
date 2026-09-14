@@ -13,6 +13,7 @@ interface PlaywrightBootstrap {
   cwd: string;
   snapshotMaxChars: number;
   snapshotGating: 'warn' | 'enforce';
+  includeCopilotCredentials?: boolean;
   authorStatePath?: string;
   playwrightStatePath: string;
 }
@@ -54,7 +55,11 @@ async function main(): Promise<void> {
     command: bootstrap.command,
     args: bootstrap.args,
     cwd: bootstrap.cwd,
-    env: copilotEnvironment(),
+    env: copilotEnvironment(
+      bootstrap.includeCopilotCredentials === undefined
+        ? {}
+        : { includeCopilotCredentials: bootstrap.includeCopilotCredentials },
+    ),
     stderr: 'ignore',
   });
   const client = new Client({ name: 'greenproof-copilot-playwright-proxy', version: '0.1.0' });
