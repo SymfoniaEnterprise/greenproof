@@ -78,7 +78,9 @@ function modelPrice(
 ): { inPerMTok: number; outPerMTok: number; cacheReadPerMTok?: number; cacheWritePerMTok?: number } | undefined {
   const table = config.model.priceTable;
   if (table === undefined) return undefined;
-  const baseName = model.replace(/\([^)]*\)$/, '').trim();
+  const closingParenthesis = model.endsWith(')') ? model.length - 1 : -1;
+  const openingParenthesis = closingParenthesis >= 0 ? model.lastIndexOf('(', closingParenthesis) : -1;
+  const baseName = (openingParenthesis >= 0 ? model.slice(0, openingParenthesis) : model).trim();
   return table[model] ?? table[baseName];
 }
 
