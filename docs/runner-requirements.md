@@ -51,13 +51,31 @@ Krok, który świadomie sprawdza NIEZEROWY kod wyjścia greenproofa (3/5/10 albo
 i na tym kończy, wyjdzie tym właśnie kodem i zaświeci się na czerwono mimo
 zaliczonych asercji - trzeba go domknąć jawnym `exit 0`.
 
-### 3. Claude Code CLI
+### 3. Agent CLI: Claude SDK albo oficjalny GitHub Copilot CLI
 
 Rdzeń używa `@anthropic-ai/claude-agent-sdk` (`packages/core/src/author/session.ts`),
 który sam woła Claude Code CLI jako subprocess. SDK instaluje je przy
 `pnpm install` jako zależność przechodnią - nie trzeba osobnego kroku
 instalacji. Nie wywołuj `claude` ręcznie w jobie; całą interakcję z modelem
 robi rdzeń przez SDK.
+
+Gdy config ustawia `model.driver: 'copilot-cli'`, rdzeń zamiast tego uruchamia
+oficjalną binarkę `copilot` jako świeży proces `-p` per case. Zainstaluj i
+zaloguj CLI zgodnie z dokumentacją GitHuba:
+
+```sh
+npm install -g @github/copilot
+copilot login
+copilot --version
+```
+
+Ten tryb nie używa `ANTHROPIC_AUTH_TOKEN` ani `baseUrl`. Greenproof dostarcza
+Copilotowi lokalne serwery MCP przez tymczasowy `--additional-mcp-config`:
+własne narzędzia procesu oraz `@playwright/mcp`. Powłoka jest blokowana przez
+`--deny-tool=shell`, więc zapis i uruchamianie Playwrighta odbywa się przez
+narzędzia MCP, a checkpoint brancha wykonuje host po sesji. Test `grp preflight`
+w tym trybie sprawdza dostępność binarki; właściwy tool-call jest wykonywany
+dopiero w sesji autora.
 
 ### 4. Przeglądarka dla Playwright
 

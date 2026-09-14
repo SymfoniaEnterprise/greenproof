@@ -60,6 +60,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ~0.116.0
         version: 0.116.0(zod@4.4.3)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.30.0
+        version: 1.30.0(zod@4.4.3)
       yaml:
         specifier: ^2.5.0
         version: 2.9.0

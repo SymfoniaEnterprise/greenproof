@@ -10,7 +10,20 @@ export interface FixtureAuthorModelConfig {
   authTokenEnv?: string;
 }
 
+export type AuthorDriver = 'claude-sdk' | 'copilot-cli';
+
+export interface CopilotCliConfig {
+  /** Binarka GitHub Copilot CLI. Domyślnie `copilot` z PATH. */
+  command?: string;
+  /** Opcjonalny limit AI Credits przekazywany bezpośrednio do CLI. */
+  maxAiCredits?: number;
+  /** Limit kontynuacji autopilota; domyślna wartość należy do CLI. */
+  maxAutopilotContinues?: number;
+}
+
 export interface ModelConfig {
+  /** Silnik sesji autora. Brak = dotychczasowy Claude Agent SDK. */
+  driver: AuthorDriver;
   /** Baza API (ANTHROPIC_BASE_URL). Pominięte = API Anthropic. */
   baseUrl?: string;
   /** Zmienna środowiskowa z tokenem (ANTHROPIC_AUTH_TOKEN). */
@@ -47,6 +60,8 @@ export interface ModelConfig {
    * Uwaga: modele z subskrypcji też bywają zerowe - ustaw `subscription` jawnie.
    */
   costModel?: 'local' | 'subscription' | 'metered';
+  /** Ustawienia używane tylko przez driver `copilot-cli`. */
+  copilot?: CopilotCliConfig;
 }
 
 export interface SeedFuseConfig {

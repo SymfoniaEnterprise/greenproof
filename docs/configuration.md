@@ -18,7 +18,8 @@ podajesz ją przez `--app-url`.
 
 Presety to punkty startowe per provider - `codex-sub` (domyślny, subskrypcja
 przez mostek OAuth), `litellm` (brama LiteLLM), `claude-sub` (API
-Anthropic wprost). KAŻDE pole modelu nadpiszesz flagą, więc dowolna kombinacja
+Anthropic wprost) oraz `copilot` (oficjalny GitHub Copilot CLI, konfiguracja
+`configs/copilot.config.mjs`). KAŻDE pole modelu nadpiszesz flagą, więc dowolna kombinacja
 provider+model nie wymaga ręcznej edycji pliku:
 
 **Preset `litellm` wymaga `--author`.** Aliasy modeli w bramie są
@@ -79,6 +80,16 @@ z `package.json` nie jest ruszane.
 
 Gotowe configi referencyjne do edycji leżą w [`configs/`](../configs/). Pełne
 demo od zera (appka + repo testów + config + run) to `pnpm demo` - patrz README.
+
+### Oficjalny GitHub Copilot CLI
+
+Config `configs/copilot.config.mjs` ustawia `model.driver: 'copilot-cli'`.
+Przed runem zaloguj się przez `copilot login` i wybierz model dostępny w lokalnej
+wersji CLI. Autor działa jako świeży proces `copilot -p` per case; Greenproof
+podłącza własne narzędzia i `@playwright/mcp` przez tymczasowy MCP stdio.
+Powłoka procesu jest zablokowana (`--deny-tool=shell`), a host Greenproof robi
+checkpoint commitów po zakończeniu sesji. `authTokenEnv` w tym trybie pozostaje
+tylko polem wspólnego schematu i nie jest wysyłany do endpointu Anthropic.
 
 ## Plik `--in` - wejście komendy
 

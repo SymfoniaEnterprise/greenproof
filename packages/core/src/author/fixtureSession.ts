@@ -16,6 +16,7 @@ import type { AppMapView, UiTrap } from '../domain/knowledge.js';
 import type { PomIndexEntry } from '../domain/harvest.js';
 import { truncateToolResponse } from './hooks.js';
 import { mcpServerCommand } from '../util/exec.js';
+import { runCopilotFixtureSession } from './copilotFixtureSession.js';
 
 export interface FixtureSessionOutput {
   status: 'delivered' | 'failed';
@@ -71,7 +72,7 @@ export interface FixtureSessionResult {
   messagesPath: string;
 }
 
-function fixtureSystemPrompt(ctx: FixtureContext): string {
+export function fixtureSystemPrompt(ctx: FixtureContext): string {
   return [
     'Jesteś fixture-authorem. Masz JEDNO zadanie: dostarczyć działający, reużywalny fixture SEEDU dla wskazanego flow aplikacji. NIE piszesz testów, NIE robisz dowodu mutacyjnego, NIE budujesz POM-ów nawigacyjnych.',
     '',
@@ -88,7 +89,7 @@ function fixtureSystemPrompt(ctx: FixtureContext): string {
   ].join('\n');
 }
 
-function fixturePrompt(ctx: FixtureContext): string {
+export function fixturePrompt(ctx: FixtureContext): string {
   const s: string[] = [
     `# Fixture-gap: ${ctx.caseId}`,
     `Flow: ${ctx.flows.join(', ')} · Aplikacja: ${ctx.envUrl}`,
@@ -140,7 +141,7 @@ export interface FixtureSessionDeps {
   onProgress?: ProgressSink;
 }
 
-export async function runFixtureSession(deps: FixtureSessionDeps): Promise<FixtureSessionResult> {
+async function runClaudeFixtureSession(deps: FixtureSessionDeps): Promise<FixtureSessionResult> {
   const { config, context, secrets, logger } = deps;
   const caps = config.caps.fixtureSession;
   const fa = config.model.fixtureAuthor;
@@ -319,4 +320,11 @@ export async function runFixtureSession(deps: FixtureSessionDeps): Promise<Fixtu
     turns,
     messagesPath,
   };
+}
+
+export async function runFixtureSession(deps: FixtureSessionDeps): Promise<FixtureSessionResult> {
+  if (deps.config.model.driver === 'copilot-cli') {
+    return runCopilotFixtureSession(deps);
+  }
+  return runClaudeFixtureSession(deps);
 }

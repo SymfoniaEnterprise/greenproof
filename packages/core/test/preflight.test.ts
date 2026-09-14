@@ -83,7 +83,7 @@ describe('preflight', () => {
   it('model z rozumowaniem: sonda ma budżet tokenów na myślenie PRZED tool_use', async () => {
     const wynik = await runPreflight(makeConfig('myslacy'), secrets);
     expect(wynik.toolUse.ok).toBe(true);
-    expect(wynik.ok).toBe(true);
+    expect(wynik.ok, JSON.stringify(wynik)).toBe(true);
   });
 
   // Preset `litellm` zapisuje placeholder, bo aliasy bramy są instalacyjne.
@@ -95,5 +95,25 @@ describe('preflight', () => {
     expect(wynik.ping.error).toMatch(/placeholder/);
     expect(wynik.ping.error).toMatch(/grp models/);
     expect(wynik.ping.latencyMs).toBeUndefined();
+  });
+
+  it('driver copilot-cli sprawdza binarkę zamiast endpointu Anthropic', async () => {
+    const wynik = await runPreflight(
+      GreenproofConfigSchema.parse({
+        platform: 'x',
+        plan: { source: 'json' },
+        model: {
+          driver: 'copilot-cli',
+          authTokenEnv: 'IGNORED',
+          author: 'gpt-5.4',
+          copilot: { command: 'node' },
+        },
+        paths: { testsRepoDir: '/tmp/x' },
+      }),
+      secrets,
+    );
+    expect(wynik.endpoint).toBe('copilot-cli');
+    expect(wynik.ok).toBe(true);
+    expect(wynik.toolUse.error).toMatch(/MCP/);
   });
 });

@@ -20,7 +20,14 @@ export const FixtureAuthorModelConfigSchema = z.object({
   authTokenEnv: z.string().min(1).exactOptional(),
 });
 
+export const CopilotCliConfigSchema = z.object({
+  command: z.string().min(1).exactOptional(),
+  maxAiCredits: z.number().positive().exactOptional(),
+  maxAutopilotContinues: z.number().int().nonnegative().exactOptional(),
+});
+
 export const ModelConfigSchema = z.object({
+  driver: z.enum(['claude-sdk', 'copilot-cli']).default('claude-sdk'),
   baseUrl: z.url().exactOptional(),
   authTokenEnv: z.string().min(1),
   author: z.string().min(1),
@@ -29,6 +36,7 @@ export const ModelConfigSchema = z.object({
   maxOutputTokens: z.number().int().positive().exactOptional(),
   priceTable: z.record(z.string(), ModelPriceSchema).exactOptional(),
   costModel: z.enum(['local', 'subscription', 'metered']).exactOptional(),
+  copilot: CopilotCliConfigSchema.exactOptional(),
 });
 
 export const SeedFuseConfigSchema = z.object({

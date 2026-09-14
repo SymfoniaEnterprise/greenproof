@@ -55,11 +55,11 @@ describe('authorSystemPrompt - dowód mutacyjny', () => {
 });
 
 describe('authorSystemPrompt - uruchamianie testów', () => {
-  const withEnforce = (enforceRunPlaywrightTool: boolean) =>
+  const withEnforce = (enforceRunPlaywrightTool: boolean, driver: 'claude-sdk' | 'copilot-cli' = 'claude-sdk') =>
     GreenproofConfigSchema.parse({
       platform: 'fake',
       plan: { source: 'json' },
-      model: { authTokenEnv: 'T', author: 'm' },
+      model: { driver, authTokenEnv: 'T', author: 'm' },
       paths: { testsRepoDir: '/tmp/x' },
       caps: { maxPlaywrightRuns: 6, proofRuns: 4, enforceRunPlaywrightTool },
     });
@@ -79,5 +79,15 @@ describe('authorSystemPrompt - uruchamianie testów', () => {
     expect(p).not.toMatch(/run_playwright/);
     expect(p).toMatch(/uruchamiaj `playwright test`/);
     expect(p).toMatch(/podawaj ŚCIEŻKI plików raportów/);
+  });
+
+  it('copilot-cli: używa nazw narzędzi sanitizowanych przez MCP i nie wymaga shell', () => {
+    const p = authorSystemPrompt(withEnforce(true, 'copilot-cli'), ctx([]));
+    expect(p).toContain('greenproof-mark_phase');
+    expect(p).toContain('greenproof-run_playwright');
+    expect(p).toContain('greenproof-record_proof_material');
+    expect(p).toContain('greenproof-finish');
+    expect(p).not.toContain('mcp__greenproof__');
+    expect(p).toContain('Nie wykonuj commitów ani push');
   });
 });

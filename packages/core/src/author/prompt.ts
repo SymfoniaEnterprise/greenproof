@@ -8,6 +8,15 @@ import type { CaseContext } from '../steps/triage.js';
 export function authorSystemPrompt(config: GreenproofConfig, context: CaseContext): string {
   const caps = config.caps;
   const sections: string[] = [];
+  const greenproofTool = (name: string): string =>
+    config.model.driver === 'copilot-cli' ? `greenproof-${name}` : `mcp__greenproof__${name}`;
+  const markPhase = greenproofTool('mark_phase');
+  const reportSeedAttempt = greenproofTool('report_seed_attempt');
+  const runPlaywright = greenproofTool('run_playwright');
+  const recordProofMaterial = greenproofTool('record_proof_material');
+  const registerPom = greenproofTool('register_pom');
+  const registerUiTrap = greenproofTool('register_ui_trap');
+  const finish = greenproofTool('finish');
 
   sections.push(
     `Jesteś agentem-autorem testów E2E (Playwright, TypeScript). Pracujesz w repo testów nad JEDNYM przypadkiem testowym. Twoim wynikiem jest draft speca, który realnie weryfikuje wymóg - nie zielony przebieg za wszelką cenę.`,
@@ -17,11 +26,11 @@ export function authorSystemPrompt(config: GreenproofConfig, context: CaseContex
 
   sections.push(
     [
-      '## Protokół faz (narzędzie mcp__greenproof__mark_phase - OBOWIĄZKOWE)',
-      '1. **arrange** - doprowadź aplikację do stanu wyjściowego (seed). Każdą strategię seedu raportuj przez report_seed_attempt.',
+      `## Protokół faz (narzędzie ${markPhase} - OBOWIĄZKOWE)`,
+      `1. **arrange** - doprowadź aplikację do stanu wyjściowego (seed). Każdą strategię seedu raportuj przez ${reportSeedAttempt}.`,
       '2. **act** - napisz spec: kroki użytkownika. PIERWSZY test w specu musi weryfikować GŁÓWNY warunek case\'a - to on jest kotwicą dowodu mutacyjnego (patrz niżej); przypadki poboczne dopisuj po nim.',
       enforceTool
-        ? '3. **assert** - uruchamiaj testy WYŁĄCZNIE narzędziem mcp__greenproof__run_playwright (`playwright test` z Basha jest zablokowany) i doprowadź do DWÓCH zielonych przebiegów. Narzędzie zwraca ścieżkę raportu TEGO przebiegu - zapamiętuj ją.'
+        ? `3. **assert** - uruchamiaj testy WYŁĄCZNIE narzędziem ${runPlaywright} (bezpośredni shell jest zablokowany) i doprowadź do DWÓCH zielonych przebiegów. Narzędzie zwraca ścieżkę raportu TEGO przebiegu - zapamiętuj ją.`
         : '3. **assert** - uruchamiaj `playwright test` i doprowadź do DWÓCH zielonych przebiegów.',
       `Budżet runów: ${caps.maxPlaywrightRuns} uruchomień na dojście do dwóch zielonych + OSOBNA pula ${caps.proofRuns} runów dowodowych, odblokowana po DRUGIM zielonym przebiegu. Limit czasu sesji: ${caps.maxTimeMinutes} min. Pracuj oszczędnie.`,
     ].join('\n'),
@@ -49,9 +58,11 @@ export function authorSystemPrompt(config: GreenproofConfig, context: CaseContex
           ]),
       '2. Uruchom test i potwierdź, że **kotwica** czerwieni się WŁASNYM komunikatem asercji expect() - nie timeoutem testu, nie błędem infrastruktury. Jeśli w czerwonym raporcie kotwica przechodzi, mutacja była chybiona: cofnij ją i wybierz wartość leżącą na ścieżce kotwicy (nie zgłaszaj dowodu „byle czerwonego").',
       enforceTool
-        ? `3. Przekaż raporty przez mcp__greenproof__record_proof_material (dwa zielone + czerwony): podawaj reportPath zwrócony przez run_playwright albo referencję run:<n> - NIGDY współdzielonego ${config.playwright.reportFile} (nadpisuje go każdy kolejny przebieg) i nie wklejaj treści raportów.`
-        : '3. Przekaż raporty przez mcp__greenproof__record_proof_material (dwa zielone + czerwony, raporty z --reporter=json) - podawaj ŚCIEŻKI plików raportów, nie wklejaj treści.',
-      '4. Przywróć wersję sprzed mutacji (git diff względem commita sprzed mutacji MUSI być pusty).',
+        ? `3. Przekaż raporty przez ${recordProofMaterial} (dwa zielone + czerwony): podawaj reportPath zwrócony przez ${runPlaywright} albo referencję run:<n> - NIGDY współdzielonego ${config.playwright.reportFile} (nadpisuje go każdy kolejny przebieg) i nie wklejaj treści raportów.`
+        : `3. Przekaż raporty przez ${recordProofMaterial} (dwa zielone + czerwony, raporty z --reporter=json) - podawaj ŚCIEŻKI plików raportów, nie wklejaj treści.`,
+      config.model.driver === 'copilot-cli'
+        ? '4. Przywróć wersję sprzed mutacji. Nie wykonuj commitów - host greenproof zapisze checkpoint po sesji.'
+        : '4. Przywróć wersję sprzed mutacji (git diff względem commita sprzed mutacji MUSI być pusty).',
       'Werdykt wydaje pipeline deterministycznie - nie deklaruj go sam.',
     ].join('\n'),
   );
@@ -72,7 +83,7 @@ export function authorSystemPrompt(config: GreenproofConfig, context: CaseContex
     [
       '## Harvest (reużywalność jest walutą)',
       'Zanim odkryjesz cokolwiek klikaniem - sprawdź sekcję inventory kontekstu: te flow są już opłacone, importuj gotowe POM-y.',
-      'Gdy MUSISZ odkryć nowy flow - wydziel go do Page Objecta/fixture\'a i zarejestruj przez register_pom (name, covers = tagi flow). Odkrytą pułapkę UI rejestruj przez register_ui_trap.',
+      `Gdy MUSISZ odkryć nowy flow - wydziel go do Page Objecta/fixture\'a i zarejestruj przez ${registerPom} (name, covers = tagi flow). Odkrytą pułapkę UI rejestruj przez ${registerUiTrap}.`,
       'Spec z surowymi selektorami, które istnieją w POM-ach, dostanie warning na przeglądzie.',
     ].join('\n'),
   );
@@ -80,10 +91,12 @@ export function authorSystemPrompt(config: GreenproofConfig, context: CaseContex
   sections.push(
     [
       '## Dyscyplina pracy',
-      `Commituj na branchu case'a po każdej fazie: seed OK → commit, zielony spec → commit, dowód → commit. Commit message zaczynaj od "[${context.case.caseId}]".`,
+      config.model.driver === 'copilot-cli'
+        ? 'Nie wykonuj commitów ani push - po zakończeniu sesji host greenproof zapisze checkpoint i dostarczy branch.'
+        : `Commituj na branchu case'a po każdej fazie: seed OK → commit, zielony spec → commit, dowód → commit. Commit message zaczynaj od "[${context.case.caseId}]".`,
       'Teardown: afterEach kasuje WYŁĄCZNIE to, co test sam utworzył.',
       `Spec zapisz w ${config.paths.specsDir}/ z identyfikatorem case'a w nazwie pliku.`,
-      'Na końcu wywołaj mcp__greenproof__finish (status + specPath + reusedPoms) i zwróć wynik strukturalny.',
+      `Na końcu wywołaj ${finish} (status + specPath + reusedPoms) i zakończ turę.`,
     ].join('\n'),
   );
 

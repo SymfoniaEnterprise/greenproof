@@ -158,6 +158,8 @@ export interface RunOutcome {
   timedOut: boolean;
   /** Awaria samego SPAWNU (ENOENT/EINVAL) - to nie to samo, co niezerowy kod. */
   spawnError?: NodeJS.ErrnoException;
+  /** Proces nie wyemitował żadnych danych przed watchdogiem startu. */
+  timedOutBeforeOutput?: boolean;
 }
 
 export interface RunOptions {
@@ -167,6 +169,12 @@ export interface RunOptions {
   timeoutMs: number;
   /** Z `spawnArgv` - linia poleceń złożona ręcznie. */
   windowsVerbatimArguments?: true;
+  /** Przechwyć stdout procesu przez callback zamiast kierować go do `ignore`. */
+  onStdout?: (chunk: string) => void;
+  /** Przechwyć stderr procesu przez callback zamiast kierować go do `ignore`. */
+  onStderr?: (chunk: string) => void;
+  /** Twardy watchdog startu; osobny od limitu całej sesji. */
+  firstOutputTimeoutMs?: number;
 }
 
 /** Żywe drzewa procesów - do sprzątnięcia, gdy host dostanie sygnał. */
@@ -254,11 +262,27 @@ export function runToCompletion(
 ): Promise<RunOutcome> {
   return new Promise((resolve) => {
     let child: ChildProcess;
+    let timedOutBeforeOutput = false;
+    let timedOut = false;
+    let hardKill: ReturnType<typeof setTimeout> | undefined;
+    let firstOutputSeen = false;
+    let firstOutputTimer: ReturnType<typeof setTimeout> | undefined;
+    const markOutput = (chunk: Buffer | string, callback?: (value: string) => void): void => {
+      firstOutputSeen = true;
+      if (firstOutputTimer !== undefined) {
+        clearTimeout(firstOutputTimer);
+        firstOutputTimer = undefined;
+      }
+      callback?.(chunk.toString());
+    };
+
     try {
       child = spawn(command, [...args], {
         cwd: opts.cwd,
         env: opts.env,
-        stdio: 'ignore',
+        stdio: opts.onStdout !== undefined || opts.onStderr !== undefined
+          ? ['ignore', 'pipe', 'pipe']
+          : 'ignore',
         // POSIX: własna grupa procesów, żeby dało się ubić CAŁE drzewo.
         detached: !isWindows(),
         ...(opts.windowsVerbatimArguments !== undefined
@@ -278,8 +302,24 @@ export function runToCompletion(
     liveTrees.add(child);
     hookHostSignals();
 
-    let timedOut = false;
-    let hardKill: ReturnType<typeof setTimeout> | undefined;
+    if (opts.onStdout !== undefined && child.stdout !== null) {
+      child.stdout.on('data', (chunk: Buffer | string) => markOutput(chunk, opts.onStdout));
+    }
+    if (opts.onStderr !== undefined && child.stderr !== null) {
+      child.stderr.on('data', (chunk: Buffer | string) => markOutput(chunk, opts.onStderr));
+    }
+    if (opts.firstOutputTimeoutMs !== undefined) {
+      firstOutputTimer = setTimeout(() => {
+        if (firstOutputSeen) return;
+        timedOutBeforeOutput = true;
+        timedOut = true;
+        killTree(child, 'SIGTERM');
+        hardKill = setTimeout(() => killTree(child, 'SIGKILL'), HARD_KILL_DELAY_MS);
+        hardKill.unref();
+      }, opts.firstOutputTimeoutMs);
+      firstOutputTimer.unref();
+    }
+
     const softKill = setTimeout(() => {
       timedOut = true;
       killTree(child, 'SIGTERM');
@@ -293,8 +333,9 @@ export function runToCompletion(
       settled = true;
       clearTimeout(softKill);
       if (hardKill !== undefined) clearTimeout(hardKill);
+      if (firstOutputTimer !== undefined) clearTimeout(firstOutputTimer);
       liveTrees.delete(child);
-      resolve(outcome);
+      resolve({ ...outcome, ...(timedOutBeforeOutput ? { timedOutBeforeOutput: true } : {}) });
     };
 
     child.once('error', (err) => {

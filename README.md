@@ -94,7 +94,8 @@ Wolisz ustawić wszystko sam - tu są presety, configi i wymagania:
   krok po kroku: **[docs/configuration.md](docs/configuration.md)**
 - **Gotowe configi startowe** - `litellm.config.mjs` (brama LiteLLM),
   `codex.config.mjs` (subskrypcja przez mostek OAuth), `claude.config.mjs`
-  (Anthropic/Claude wprost): **[docs/configuration.md](docs/configuration.md)**
+  (Anthropic/Claude wprost) oraz `copilot.config.mjs` (oficjalny GitHub Copilot CLI)
+  : **[docs/configuration.md](docs/configuration.md)**
 - **Wymagania środowiska** - co runner musi mieć zainstalowane:
   **[docs/runner-requirements.md](docs/runner-requirements.md)**
 
