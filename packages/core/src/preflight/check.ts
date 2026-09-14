@@ -2,10 +2,12 @@
  * Preflight endpointu modelu - walidacja PRZED odpaleniem sesji autora.
  * Dwa stopnie: (1) zwykły ping /v1/messages, (2) wymuszony tool-call -
  * silnik autora żyje z narzędzi, a to właśnie tool-calling najczęściej
- * kuleje w bramach i mostkach subskrypcyjnych (np. CLIProxyAPI).
+ * kuleje w bramach modeli (np. LiteLLM).
  */
 import type { GreenproofConfig } from '../config/types.js';
 import type { SecretsPort } from '../ports/index.js';
+import { copilotEnvironment } from '../author/copilotEnvironment.js';
+import { runToCompletion, spawnArgv } from '../util/exec.js';
 
 export interface PreflightResult {
   endpoint: string;
@@ -94,6 +96,9 @@ export async function runPreflight(
   secrets: SecretsPort,
   opts?: { timeoutMs?: number },
 ): Promise<PreflightResult> {
+  if (config.model.driver === 'copilot-cli') {
+    return runCopilotCliPreflight(config, opts?.timeoutMs ?? 120_000);
+  }
   const endpoint = config.model.baseUrl ?? 'https://api.anthropic.com';
   const token = secrets.get(config.model.authTokenEnv);
   const timeoutMs = opts?.timeoutMs ?? 120_000;
@@ -153,4 +158,48 @@ export async function runPreflight(
 
   result.ok = result.ping.ok && result.toolUse.ok;
   return result;
+}
+
+async function runCopilotCliPreflight(
+  config: GreenproofConfig,
+  timeoutMs: number,
+): Promise<PreflightResult> {
+  const command = config.model.copilot?.command ?? 'copilot';
+  const spawned = spawnArgv(command, ['--version']);
+  const output: string[] = [];
+  const started = Date.now();
+  const outcome = await runToCompletion(spawned.command, spawned.args, {
+    cwd: process.cwd(),
+    env: copilotEnvironment(),
+    timeoutMs: Math.min(timeoutMs, 15_000),
+    ...spawned.options,
+    onStdout: (chunk) => output.push(chunk),
+    onStderr: (chunk) => output.push(chunk),
+  });
+  const exitError = outcome.exitCode === 0
+    ? undefined
+    : outcome.signal !== null
+      ? `Copilot CLI zakończył się sygnałem ${outcome.signal}.`
+      : `Copilot CLI zakończył się kodem ${String(outcome.exitCode)}.`;
+  const error = outcome.spawnError?.message ??
+    (outcome.timedOut ? 'Copilot CLI nie odpowiedział w limicie czasu.' : undefined) ??
+    exitError;
+  const ok = error === undefined;
+  const latencyMs = Date.now() - started;
+  const note = ok
+    ? 'Wersja CLI działa. Właściwy tool-call jest sprawdzany przez sesję autora i lokalne serwery MCP.'
+    : `${error} ${output.join('').trim().slice(0, 300)}`;
+  return {
+    endpoint: 'copilot-cli',
+    model: config.model.author,
+    ping: { ok, latencyMs, ...(error !== undefined ? { error: note } : {}) },
+    toolUse: {
+      ok,
+      latencyMs,
+      ...(error !== undefined
+        ? { error: note }
+        : { error: 'Weryfikacja MCP następuje przy uruchomieniu sesji autora.' }),
+    },
+    ok,
+  };
 }

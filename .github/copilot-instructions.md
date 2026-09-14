@@ -31,7 +31,7 @@ leżą w `skills/`:
   retry vs eskalacja fixture; rekomendacje accept/waiver/release; sprzątanie
   i monitoring długich runów.
 - **`skills/greenproof-config.md`** - presety providerów
-  (`codex-sub`/`litellm`/`claude-sub`), zmiana modelu i providera, obowiązkowy
+  (`litellm`/`claude-sub`/`copilot`), zmiana modelu i providera, obowiązkowy
   `greenproof preflight`, eskalacja fixture, `priceTable`, capy, efforty, tokeny.
 
 Zasady nadrzędne: **run odpala człowiek w interaktywnym terminalu, nigdy agent

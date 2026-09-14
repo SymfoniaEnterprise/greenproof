@@ -98,13 +98,12 @@ Zapytaj: „Czy konfigurujemy środowisko do pracy lokalnej (adapter-fs), czy in
 Sprawdź w tle, które lokalne mostki i bramy faktycznie odpowiadają na maszynie:
 ```sh
 curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4000/v1/models   # Brama LiteLLM
-curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8317/v1/models   # CLIProxyAPI (mostek OAuth)
 ```
 
 **Działanie**:
 Przedstaw dostępne presety i zaznacz, które endpointy odpowiedziały na maszynie:
-1. `litellm` - Brama LiteLLM (`http://127.0.0.1:4000`): dostęp do modeli chmurowych, lokalnych lub abonamentowych; domyślna eskalacja fixture do Claude Sonnet. (Status portu 4000: *dostępny / niedostępny*).
-2. `codex-sub` - Mostek CLIProxyAPI (`http://127.0.0.1:8317`): subskrypcja przez OAuth z modelami `gpt-5.6-luna(max)` + eskalacja `gpt-5.6-sol(high)`. (Status portu 8317: *dostępny / niedostępny*).
+1. `litellm` (domyślny) - Brama LiteLLM (`http://127.0.0.1:4000`): dostęp do modeli chmurowych, lokalnych lub abonamentowych; domyślna eskalacja fixture do Claude Sonnet. (Status portu 4000: *dostępny / niedostępny*).
+2. `copilot` - Oficjalne GitHub Copilot CLI (driver `copilot-cli`): logowanie przez `copilot login` (bez endpointu HTTP), model autora `gpt-5.6-luna` + eskalacja fixture `gpt-5.6-terra`.
 3. `claude-sub` - API Anthropic wprost: subskrypcja z logowania Claude Code w katalogu domowym lub bezpośredni token Anthropic; domyślnie `claude-opus-5`, bez eskalacji fixture.
 
 Zapytaj użytkownika o wybór presetu.
@@ -117,7 +116,7 @@ Zapytaj użytkownika o wybór presetu.
 
 **Zmienne per preset**:
 - Dla `litellm`: `LITELLM_KEY`
-- Dla `codex-sub`: `CLIPROXY_TOKEN`
+- Dla `copilot`: brak tokenu w env - uwierzytelnienie przez `copilot login` (placeholder `COPILOT_GITHUB_TOKEN`, jeśli config wymaga wpisu)
 - Dla `claude-sub`: `ANTHROPIC_AUTH_TOKEN` (opcjonalny, jeśli użytkownik jest zalogowany w Claude Code lokalnie)
 
 **Jak wykryć**:
@@ -159,7 +158,7 @@ Pokaż użytkownikowi 2-3 rekomendowane modele w zależności od presetu:
     więc nazwy zgadnięte z pamięci zwykle nie istnieją. Preset zapisuje
     placeholder `<model-z-bramy>`, który MUSI zostać wypełniony.
   - Z listy: tani flash na start, `claude-sonnet-5` przy wysokiej skuteczności w Playwrighcie.
-- Dla `codex-sub`: `gpt-5.6-luna(max)` (w ramach abonamentu).
+- Dla `copilot`: `gpt-5.6-luna` (eskalacja fixture `gpt-5.6-terra`).
 - Dla `claude-sub`: `claude-opus-5` lub `claude-sonnet-5`.
 
 Wyjaśnij zasadę `priceTable`:
@@ -336,8 +335,8 @@ Przedstaw krótką mapę postępowania:
 | Objaw | Przyczyna | Co zrobić |
 |---|---|---|
 | `curl` do `--app-url` zwraca błąd połączenia | Aplikacja testowana nie została uruchomiona | Uruchom serwer testowanej aplikacji w osobnym terminalu przed startem runu. |
-| Preflight zwraca `exit 2` z brakiem `tool_use` | Model lub brama/mostek nie obsługuje formatu narzędzi Anthropic | Zmień model na wspierający tool-calling lub sprawdź konfigurację mostka (np. CLIProxyAPI). |
-| Błąd HTTP 401 / 403 podczas preflightu | Brakujący, błędny lub wygasły token API | Sprawdź zmienną w `.env` (`LITELLM_KEY`, `CLIPROXY_TOKEN` lub `ANTHROPIC_AUTH_TOKEN`). |
+| Preflight zwraca `exit 2` z brakiem `tool_use` | Model lub brama nie obsługuje formatu narzędzi Anthropic | Zmień model na wspierający tool-calling lub sprawdź konfigurację bramy LiteLLM. |
+| Błąd HTTP 401 / 403 podczas preflightu | Brakujący, błędny lub wygasły token API | Sprawdź zmienną w `.env` (`LITELLM_KEY` lub `ANTHROPIC_AUTH_TOKEN`); dla presetu `copilot` powtórz `copilot login`. |
 | `grp run --init-only` zgłasza błąd o brakującym `.git` | Wskazany katalog testów nie jest repozytorium git | Wykonaj `git init <sciezka>` w katalogu testów (greenproof commituje na gałęziach `author/*`). |
 | `grp run` odrzuca plik wejściowy `--in` | Plik planu nie spełnia schematu `NormalizedPlan` | Upewnij się, że plan zawiera pola `slug` oraz tablicę `cases` z wymaganymi polami (`caseId`, `title`, `level`, `priority`, `requirements`, `flows`). |
-| Pusta lista modeli w `grp models` | Brama nie jest uruchomiona lub nie udostępnia endpointu `/v1/models` | Uruchom bramę LiteLLM / CLIProxyAPI lub podaj nazwę modelu jawnie flagą `--author <nazwa>`. |
+| Pusta lista modeli w `grp models` | Brama nie jest uruchomiona lub nie udostępnia endpointu `/v1/models` | Uruchom bramę LiteLLM lub podaj nazwę modelu jawnie flagą `--author <nazwa>`. |

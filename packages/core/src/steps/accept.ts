@@ -57,6 +57,15 @@ export async function runAccept(
     // proposals/<case>.yaml → merge do ui-traps.yaml (na branchu - widoczne w diffie PR).
     await promoteTrapProposals(ports, config, branch, params.caseId);
 
+    // Pod authoring.branchStrategy 'single' wszystkie case'y dzielą jedną gałąź - PR otwieramy
+    // RAZ na run. Kolejne akceptacje dobiły już POM/traps wyżej i tu tylko zwracają ten sam PR
+    // (bez tego autoAccept otwierałby N PR-ów, każdy ze skumulowanym diffem wszystkich case'ów).
+    const single = config.authoring.branchStrategy === 'single';
+    if (single && state.runPrUrl !== undefined) {
+      transitionCase(state, params.caseId, 'accepted');
+      return { prUrl: state.runPrUrl };
+    }
+
     const proofBuf = cs.artifacts.proof
       ? await ports.artifacts.get(state.runId, cs.artifacts.proof)
       : await ports.artifacts.get(state.runId, proofArtifactKey(params.caseId));
@@ -65,9 +74,10 @@ export async function runAccept(
     const pr = await ports.scm.openPullRequest({
       from: branch,
       to: params.targetBranch,
-      title: `test(e2e): ${params.caseId}`,
+      title: single ? `test(e2e): ${state.slug} (batch)` : `test(e2e): ${params.caseId}`,
       body: prBody(params.caseId, state.runId, proof, last?.reusedPoms ?? [], params.acceptedBy ?? 'human'),
     });
+    if (single) state.runPrUrl = pr.url;
 
     transitionCase(state, params.caseId, 'accepted');
     return { prUrl: pr.url };

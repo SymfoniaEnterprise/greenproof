@@ -130,3 +130,63 @@ describe('mcpServerCommand', () => {
     expect(input).toEqual(args);
   });
 });
+
+describe('runToCompletion', () => {
+  it('drenuje nieobserwowany strumień, gdy callback dotyczy tylko stdout', async () => {
+    let stdout = '';
+    const outcome = await import('../src/util/exec.js').then(({ runToCompletion }) =>
+      runToCompletion(
+        process.execPath,
+        ['-e', "process.stderr.write('x'.repeat(1024 * 1024)); process.stdout.write('done')"],
+        {
+          cwd: process.cwd(),
+          env: process.env,
+          timeoutMs: 5_000,
+          onStdout: (chunk) => { stdout += chunk; },
+        },
+      ));
+
+    expect(outcome.exitCode).toBe(0);
+    expect(outcome.timedOut).toBe(false);
+    expect(stdout).toBe('done');
+  });
+
+  it('nie uznaje ostrzeżenia stderr za pierwszą turę', async () => {
+    const outcome = await import('../src/util/exec.js').then(({ runToCompletion }) =>
+      runToCompletion(
+        process.execPath,
+        ['-e', "process.stderr.write('warning\\n'); setTimeout(() => {}, 2_000)"],
+        {
+          cwd: process.cwd(),
+          env: process.env,
+          timeoutMs: 5_000,
+          firstOutputTimeoutMs: 100,
+          firstOutputReady: () => false,
+          onStderr: () => {},
+        },
+      ));
+
+    expect(outcome.timedOut).toBe(true);
+    expect(outcome.timedOutBeforeOutput).toBe(true);
+  });
+
+  it('kończy proces po zewnętrznym abort sygnału', async () => {
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), 50);
+    const outcome = await import('../src/util/exec.js').then(({ runToCompletion }) =>
+      runToCompletion(
+        process.execPath,
+        ['-e', 'setInterval(() => {}, 1_000)'],
+        {
+          cwd: process.cwd(),
+          env: process.env,
+          timeoutMs: 5_000,
+          abortSignal: controller.signal,
+        },
+      ));
+    clearTimeout(abortTimer);
+
+    expect(outcome.timedOut).toBe(false);
+    expect(outcome.exitCode === null || outcome.exitCode !== 0).toBe(true);
+  });
+});

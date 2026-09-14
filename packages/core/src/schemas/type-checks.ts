@@ -32,7 +32,7 @@ import type {
   UiTrap,
   UiTraps,
 } from '../domain/knowledge.js';
-import type { GreenproofConfig } from '../config/types.js';
+import type { NormalizedGreenproofConfig } from '../config/types.js';
 
 import type { NormalizedPlanSchema, PlanCaseSchema } from './plan.js';
 import type {
@@ -121,4 +121,4 @@ type _CheckLearnedChurnList = Expect<
 >;
 
 // --- config ---
-type _CheckConfig = Expect<Equal<Out<typeof GreenproofConfigSchema>, GreenproofConfig>>;
+type _CheckConfig = Expect<Equal<Out<typeof GreenproofConfigSchema>, NormalizedGreenproofConfig>>;

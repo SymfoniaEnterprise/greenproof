@@ -16,20 +16,21 @@ testów (musi istnieć katalog `.git`). `--tests-repo` wskazuje **repo testów**
 miejsce, w którym greenproof zapisuje testy. Testowana aplikacja to co innego:
 podajesz ją przez `--app-url`.
 
-Presety to punkty startowe per provider - `codex-sub` (domyślny, subskrypcja
-przez mostek OAuth), `litellm` (brama LiteLLM), `claude-sub` (API
-Anthropic wprost). KAŻDE pole modelu nadpiszesz flagą, więc dowolna kombinacja
+Presety to punkty startowe per provider - `litellm` (domyślny, brama LiteLLM),
+`claude-sub` (API Anthropic wprost) oraz `copilot` (oficjalny GitHub Copilot CLI,
+konfiguracja `configs/copilot.config.mjs`). KAŻDE pole modelu nadpiszesz flagą, więc dowolna kombinacja
 provider+model nie wymaga ręcznej edycji pliku:
 
 **Preset `litellm` wymaga `--author`.** Aliasy modeli w bramie są
 instalacyjne - u każdego wpisy nazywają się inaczej - więc preset nie zgaduje
 i zapisuje placeholder `<model-z-bramy>`. Dopóki tam zostaje, preflight
 przerywa run z instrukcją zamiast wysyłać do bramy nieistniejącą nazwę. Listę
-realnych nazw daje `grp models`. Presety subskrypcyjne placeholdera nie mają:
-tam nazwy narzuca mostek i są takie same u wszystkich.
+realnych nazw daje `grp models`. Pozostałe presety placeholdera nie mają: mają
+ustalone nazwy modeli (preset `copilot` narzuca modele GPT-5.6 - `gpt-5.6-luna`
+dla autora, `gpt-5.6-terra` dla eskalacji fixture).
 
 ```sh
-# Preset bez zmian (token w env wg presetu: CLIPROXY_TOKEN / LITELLM_KEY / ANTHROPIC_AUTH_TOKEN):
+# Preset bez zmian (token w env wg presetu: LITELLM_KEY / ANTHROPIC_AUTH_TOKEN / COPILOT_GITHUB_TOKEN):
 grp models --config <config>        # najpierw sprawdź, co wystawia TWOJA brama
 grp run --tests-repo /ścieżka/do/repo-z-testami --init-only --preset litellm \
   --author <nazwa-z-listy-wyżej>
@@ -58,7 +59,7 @@ Przebieg to jedna komenda (endpoint najpierw przechodzi preflight). Dwa
 warianty - gotowy config z repo ALBO customizacja od zera:
 
 ```sh
-# Wariant A: gotowy config (configs/litellm|codex|claude.config.mjs - model
+# Wariant A: gotowy config (configs/litellm|claude|copilot.config.mjs - model
 # w jednym oznaczonym miejscu, token w configs/.env). --tests-repo wskazuje
 # repo testów, bo gotowe configi nie mają go wbitego:
 grp run --config configs/litellm.config.mjs \
@@ -79,6 +80,16 @@ z `package.json` nie jest ruszane.
 
 Gotowe configi referencyjne do edycji leżą w [`configs/`](../configs/). Pełne
 demo od zera (appka + repo testów + config + run) to `pnpm demo` - patrz README.
+
+### Oficjalny GitHub Copilot CLI
+
+Config `configs/copilot.config.mjs` ustawia `model.driver: 'copilot-cli'`.
+Przed runem zaloguj się przez `copilot login` i wybierz model dostępny w lokalnej
+wersji CLI. Autor działa jako świeży proces `copilot -p` per case; Greenproof
+podłącza własne narzędzia i `@playwright/mcp` przez tymczasowy MCP stdio.
+Powłoka procesu jest zablokowana (`--deny-tool=shell`), a host Greenproof robi
+checkpoint commitów po zakończeniu sesji. `authTokenEnv` w tym trybie pozostaje
+tylko polem wspólnego schematu i nie jest wysyłany do endpointu Anthropic.
 
 ## Plik `--in` - wejście komendy
 
@@ -115,7 +126,7 @@ Przykład - retry case'a z uwagami (`retry.json`):
 ```
 
 ```sh
-grp retry --config configs/codex.config.mjs \
+grp retry --config configs/litellm.config.mjs \
   --tests-repo ~/dev/moje-testy --in retry.json --out wynik.json
 ```
 
@@ -131,8 +142,9 @@ kroków w CI.
   Bez `--config` CLI szuka `greenproof.config.<ext>` najpierw w cwd, potem
   w katalogu z `GREENPROOF_TESTS_REPO` (pierwszy trafiony wygrywa) i loguje,
   który plik wybrał i skąd.
-- `run --tests-repo <p> --init-only [--preset codex-sub|litellm|claude-sub]` - generuje
-  `<tests-repo>/greenproof.config.mjs` (domyślny preset: `codex-sub`);
+- `run --tests-repo <p> --init-only [--preset litellm|claude-sub|copilot]` - generuje
+  `<tests-repo>/greenproof.config.mjs` (domyślny preset: `codex-sub`, zachowany
+  dla kompatybilności; nowe konfiguracje mogą użyć `litellm`);
   `--config <p>` zmienia cel, a `--force` pozwala nadpisać istniejący plik.
 - `--author` / `--base-url` / `--token-env` / `--fixture-author <model>|auto|none`
   - nadpisania pól presetu (`run --init-only`, oraz `run` przy pierwszorazowej

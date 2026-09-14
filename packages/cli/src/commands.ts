@@ -86,7 +86,7 @@ export type KnowledgeArgs = Pick<CommandArgs, 'config' | 'input'>;
 /* --------------------------------------------------------------------- init */
 
 export interface InitArgs {
-  /** Gotowy profil (codex-sub | litellm | claude-sub). */
+  /** Gotowy profil (codex-sub | copilot | litellm | claude-sub). */
   preset?: string;
   testsRepo?: string;
   /** Docelowy plik konfiguracyjny. */
@@ -138,9 +138,13 @@ export function isModelPlaceholder(model: string): boolean {
 interface InitPreset {
   /** Opis do helpa i komentarza wygenerowanego pliku. */
   label: string;
+  /** Silnik sesji autora; brak = 'claude-sdk' (endpoint Anthropic/brama). */
+  driver?: 'claude-sdk' | 'copilot-cli';
   baseUrl?: string;
   tokenEnv: string;
   author: string;
+  /** Źródło kosztu do wygenerowanego configu (subscription = abonament). */
+  costModel?: 'local' | 'subscription' | 'metered';
   /** Brak = bez eskalacji; bez baseUrl/tokenEnv = poświadczenia Claude z HOME. */
   fixtureAuthor?: PresetFixtureAuthor;
   /** Ranking modeli eskalacji (auto, po nazwie bazowej); brak = bez eskalacji. */
@@ -157,10 +161,11 @@ interface InitPreset {
  * więc dowolna kombinacja nie wymaga ręcznej edycji pliku.
  */
 const INIT_PRESETS: Record<string, InitPreset> = {
+  // Zachowana nazwa i konfiguracja sprzed wprowadzenia drivera Copilot CLI.
   'codex-sub': {
     label: 'CLIProxyAPI (subskrypcja przez mostek OAuth): gpt-5.6-luna(max) + eskalacja gpt-5.6-sol(high)',
-    baseUrl: 'http://127.0.0.1:8317',
     tokenEnv: 'CLIPROXY_TOKEN',
+    baseUrl: 'http://127.0.0.1:8317',
     author: 'gpt-5.6-luna(max)',
     fixtureAuthor: { model: 'gpt-5.6-sol(high)' },
     fixtureAuthorPreference: ['gpt-5.6-sol(high)', 'gpt-5.6-luna(max)'],
@@ -170,6 +175,26 @@ const INIT_PRESETS: Record<string, InitPreset> = {
     },
     fixtureSessionMaxCostUsd: 1,
     secretsNote: 'Ustaw CLIPROXY_TOKEN w środowisku procesu.',
+  },
+  copilot: {
+    label:
+      'Oficjalny GitHub Copilot CLI (subskrypcja, `copilot login`): gpt-5.6-luna + eskalacja gpt-5.6-terra',
+    driver: 'copilot-cli',
+    // Bez baseUrl: Copilot CLI nie jest endpointem OpenAI/Anthropic - routing
+    // modeli robi sam GitHub Copilot po zalogowaniu (`copilot login`).
+    tokenEnv: 'COPILOT_GITHUB_TOKEN',
+    author: 'gpt-5.6-luna',
+    costModel: 'subscription',
+    // Bez fixtureAuthorPreference celowo: Copilot nie ma listy /v1/models, więc
+    // eskalacja idzie prosto z presetu (źródło 'preset'), bez zapytania o listę.
+    fixtureAuthor: { model: 'gpt-5.6-terra' },
+    priceTable: {
+      'gpt-5.6-luna': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
+      'gpt-5.6-terra': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
+    },
+    fixtureSessionMaxCostUsd: 1,
+    secretsNote:
+      'Zaloguj się przez `copilot login` (GitHub Copilot). Token NIE trafia do configu ani .env; COPILOT_GITHUB_TOKEN to tylko nazwa zmiennej dla wariantu bez interaktywnego logowania.',
   },
   litellm: {
     label:
@@ -374,9 +399,11 @@ export async function cmdInit(args: InitArgs): Promise<InitOutput> {
     label: preset.label,
     secretsNote: preset.secretsNote,
     testsRepoDir,
+    ...(preset.driver !== undefined ? { driver: preset.driver } : {}),
     author,
     ...(baseUrl !== undefined ? { baseUrl } : {}),
     tokenEnv,
+    ...(preset.costModel !== undefined ? { costModel: preset.costModel } : {}),
     ...(fixtureAuthor !== undefined ? { fixtureAuthor } : {}),
     priceTable,
     fixtureSessionMaxCostUsd: preset.fixtureSessionMaxCostUsd,
@@ -408,9 +435,11 @@ interface ConfigSourceInput {
   label: string;
   secretsNote: string;
   testsRepoDir: string;
+  driver?: 'claude-sdk' | 'copilot-cli';
   author: string;
   baseUrl?: string;
   tokenEnv: string;
+  costModel?: 'local' | 'subscription' | 'metered';
   fixtureAuthor?: PresetFixtureAuthor;
   priceTable: InitPreset['priceTable'];
   fixtureSessionMaxCostUsd: number;
@@ -436,6 +465,19 @@ function configSource(input: ConfigSourceInput): string {
     )
     .join('\n');
 
+  // 'claude-sdk' to domyślny driver - nie zaśmiecamy nim wygenerowanego pliku.
+  const driverLine =
+    input.driver !== undefined && input.driver !== 'claude-sdk' ? `    driver: ${j(input.driver)},\n` : '';
+  const baseUrlLine = input.baseUrl !== undefined ? `    baseUrl: ${j(input.baseUrl)},\n` : '';
+  const costModelLine = input.costModel !== undefined ? `    costModel: ${j(input.costModel)},\n` : '';
+  const copilotLines =
+    input.driver === 'copilot-cli'
+      ? [
+          `    // Sesja autora idzie przez oficjalny GitHub Copilot CLI (copilot login).`,
+          `    copilot: { maxAutopilotContinues: 5 },`,
+        ].join('\n') + '\n'
+      : '';
+
   return `// Wygenerowano przez: greenproof init --preset ${input.presetName}
 // Profil: ${input.label}
 // Sekretów nie ma w tym pliku. ${input.secretsNote}
@@ -460,9 +502,9 @@ export default {
   platformOptions: { repoDir: testsRepoDir, baseDir },
   plan: { source: 'json' },
   model: {
-${input.baseUrl !== undefined ? `    baseUrl: ${j(input.baseUrl)},\n` : ''}    authTokenEnv: ${j(input.tokenEnv)},
+${driverLine}${baseUrlLine}    authTokenEnv: ${j(input.tokenEnv)},
     author: ${j(input.author)},
-${fixtureLines}    // Stawki 0 = capy kosztowe nie gryzą (zostają tury/czas) - uzupełnij
+${costModelLine}${copilotLines}${fixtureLines}    // Stawki 0 = capy kosztowe nie gryzą (zostają tury/czas) - uzupełnij
     // realne USD/MTok, jeśli chcesz twardego budżetu $.
     priceTable: {
 ${priceLines}
@@ -495,6 +537,11 @@ ${priceLines}
     timeoutPerCaseMin: 25,
     timeoutCapMin: 340,
     splitWarnAt: 12,
+  },
+  // branchStrategy: 'single' = jedna gałąź autora na cały run (author/<slug>) zamiast per-case.
+  authoring: {
+    branchStrategy: 'per-case',
+    branchPrefix: 'author/',
   },
   playwright: {
     command: ['npx', 'playwright', 'test'],

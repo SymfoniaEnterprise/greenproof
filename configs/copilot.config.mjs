@@ -1,11 +1,11 @@
-// Gotowy config: SUBSKRYPCJA CODEX przez mostek CLIProxyAPI (http://127.0.0.1:8317).
+// Gotowy config: SUBSKRYPCJA przez oficjalny GitHub Copilot CLI (agent procesowy autora).
 // Użycie:
-//   grp run --config configs/codex.config.mjs \
+//   grp run --config configs/copilot.config.mjs \
 //     --in <plan.json> --app-url http://localhost:3132
-// Token: configs/.env z linią `CLIPROXY_TOKEN=...` (klucz z ~/.config/cliproxyapi/config.yaml)
-// albo zmienna środowiskowa. Repo testów: GREENPROOF_TESTS_REPO w env,
-// domyślnie ~/.local/share/greenproof/manual-codex/tests-repo (run scaffolduje sam).
-// Efforty: sufiks w nazwie modelu, np. gpt-5.6-luna(max) - patrz docs/model-bridges.md §4a.
+// Wymaga zalogowania: `copilot login` (token NIE trafia do .env ani configu).
+// Model musi być dostępny w lokalnym CLI (model picker: "GPT-5.6 Luna" itd.).
+// Repo testów: GREENPROOF_TESTS_REPO w env, domyślnie
+// ~/.local/share/greenproof/manual-copilot/tests-repo (run scaffolduje sam).
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -14,7 +14,7 @@ const home = join(
     ? (process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'))
     : (process.env.XDG_DATA_HOME ?? join(homedir(), '.local', 'share')),
   'greenproof',
-  'manual-codex',
+  'manual-copilot',
 );
 const testsRepoDir = process.env.GREENPROOF_TESTS_REPO ?? join(home, 'tests-repo');
 
@@ -23,15 +23,21 @@ export default {
   platformOptions: { repoDir: testsRepoDir, baseDir: join(home, 'platform') },
   plan: { source: 'json' },
   model: {
-    baseUrl: 'http://127.0.0.1:8317',
-    authTokenEnv: 'CLIPROXY_TOKEN',
-    // ── TU ZMIENIASZ MODEL ── (sufiks (low|medium|high|max) = reasoning effort):
-    author: 'gpt-5.6-luna(max)',
-    fixtureAuthor: { model: 'gpt-5.6-sol(high)' },
+    driver: 'copilot-cli',
+    // Wymagane przez wspólny schemat, ale Copilot CLI używa własnego loginu.
+    authTokenEnv: 'COPILOT_GITHUB_TOKEN',
+    // ── TU ZMIENIASZ MODEL ── nazwa z katalogu Copilot (rodzina gpt-5.6-*):
+    author: 'gpt-5.6-luna',
+    // Eskalacja fixture-author: mocniejszy model z tej samej rodziny.
+    fixtureAuthor: { model: 'gpt-5.6-terra' },
+    costModel: 'subscription',
     // Subskrypcja = realnie $0; zera zostawiają capy tur/czasu jako jedyne.
     priceTable: {
       'gpt-5.6-luna': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
-      'gpt-5.6-sol': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
+      'gpt-5.6-terra': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
+    },
+    copilot: {
+      maxAutopilotContinues: 5,
     },
   },
   caps: {

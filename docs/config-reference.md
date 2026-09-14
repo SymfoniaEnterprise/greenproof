@@ -65,6 +65,7 @@ domyślnego eksportu z metodą `parse`.
 
 ```ts
 interface ModelConfig {
+  driver?: 'claude-sdk' | 'copilot-cli'; // domyślnie claude-sdk
   baseUrl?: string;            // ANTHROPIC_BASE_URL - brama (LiteLLM itp.)
   authTokenEnv: string;        // nazwa zmiennej env z tokenem (wymagane)
   author: string;              // model agenta-autora (wymagane)
@@ -76,8 +77,29 @@ interface ModelConfig {
     cacheWritePerMTok?: number;
   }>;
   costModel?: 'local' | 'subscription' | 'metered';
+  copilot?: {
+    command?: string;           // domyślnie `copilot`
+    maxAiCredits?: number;      // przekazywane do --max-ai-credits
+    maxAutopilotContinues?: number;
+  };
 }
 ```
+
+### `model.driver: 'copilot-cli'`
+
+Ten driver uruchamia oficjalny GitHub Copilot CLI jako osobny proces (`-p` +
+`--mode autopilot`). Nie używa tokenu `authTokenEnv` ani endpointu
+Anthropic-compatible; CLI korzysta z własnego `copilot login`/poświadczeń.
+
+Greenproof tworzy dla każdej sesji efemeryczny plik `--additional-mcp-config`,
+który podłącza dwa lokalne serwery stdio: `greenproof` (narzędzia procesu i
+capów) oraz `playwright` (`@playwright/mcp`). Powłoka jest blokowana przez
+`--deny-tool=shell`; zapis stanu sesji i transcript JSONL zostają w katalogu
+próby.
+
+Przykład: `configs/copilot.config.mjs`. ACP nie jest wymagany przez ten driver;
+został pozostawiony jako osobna opcja integracji, ponieważ GitHub oznacza go
+obecnie jako public preview.
 
 - **`authTokenEnv`** - nazwa zmiennej środowiskowej z tokenem. Wzorzec:
   `'LITELLM_KEY'` dla bramy, `'ANTHROPIC_AUTH_TOKEN'` dla SDK bezpośrednio.
@@ -99,8 +121,9 @@ interface ModelConfig {
   - `local` - model na własnym sprzęcie. Cap SDK **nie jest ustawiany**;
     granicą są `maxTurns` i `maxTimeMinutes` (SDK wyceniłoby darmowy run
     cennikiem Anthropic i ubiło go na capie kosztowym).
-  - `subscription` - mostek do abonamentu (CLIProxyAPI, subskrypcja
-    Claude). Per token nie płacimy, ale limit zużycia istnieje → odbojnik
+  - `subscription` - model z abonamentu (oficjalny GitHub Copilot CLI,
+    subskrypcja Claude albo dowolna brama subskrypcyjna, np. za LiteLLM).
+    Per token nie płacimy, ale limit zużycia istnieje → odbojnik
     zostaje (`maxCostUsd × 20` z `priceTable`, inaczej `maxCostUsd`).
   - `metered` - zwykłe API rozliczane per token.
 

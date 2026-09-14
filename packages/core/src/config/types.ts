@@ -10,7 +10,20 @@ export interface FixtureAuthorModelConfig {
   authTokenEnv?: string;
 }
 
+export type AuthorDriver = 'claude-sdk' | 'copilot-cli';
+
+export interface CopilotCliConfig {
+  /** Binarka GitHub Copilot CLI. Domyślnie `copilot` z PATH. */
+  command?: string;
+  /** Opcjonalny limit AI Credits przekazywany bezpośrednio do CLI. */
+  maxAiCredits?: number;
+  /** Limit kontynuacji autopilota; domyślna wartość należy do CLI. */
+  maxAutopilotContinues?: number;
+}
+
 export interface ModelConfig {
+  /** Silnik sesji autora. Brak = dotychczasowy Claude Agent SDK. */
+  driver?: AuthorDriver;
   /** Baza API (ANTHROPIC_BASE_URL). Pominięte = API Anthropic. */
   baseUrl?: string;
   /** Zmienna środowiskowa z tokenem (ANTHROPIC_AUTH_TOKEN). */
@@ -47,6 +60,8 @@ export interface ModelConfig {
    * Uwaga: modele z subskrypcji też bywają zerowe - ustaw `subscription` jawnie.
    */
   costModel?: 'local' | 'subscription' | 'metered';
+  /** Ustawienia używane tylko przez driver `copilot-cli`. */
+  copilot?: CopilotCliConfig;
 }
 
 export interface SeedFuseConfig {
@@ -99,6 +114,17 @@ export interface BatchingConfig {
   timeoutCapMin: number;
   /** Powyżej tylu case'ów filter ostrzega o podziale planu. */
   splitWarnAt: number;
+}
+
+export interface AuthoringConfig {
+  /**
+   * Strategia gałęzi autora:
+   * - 'per-case' (domyślnie) — osobna gałąź `author/<caseId>` na każdy case;
+   * - 'single' — JEDNA gałąź na cały run (`author/<slug>`), wszystkie case'y stackują na niej.
+   */
+  branchStrategy: 'per-case' | 'single';
+  /** Prefiks gałęzi autora. Nazwa = prefix + safeCaseId(caseId) | safeCaseId(slug) (single). */
+  branchPrefix: string;
 }
 
 export interface PathsConfig {
@@ -170,6 +196,8 @@ export interface GreenproofConfig {
   /** Bramki zachowania pipeline'u (auto-akceptacja). */
   gates: GatesConfig;
   batching: BatchingConfig;
+  /** Strategia gałęzi autora (per-case vs jedna gałąź na run). */
+  authoring: AuthoringConfig;
   playwright: PlaywrightConfig;
   paths: PathsConfig;
   knowledge?: KnowledgeConfig;
@@ -177,9 +205,18 @@ export interface GreenproofConfig {
   appDocs?: AppDocsConfig;
 }
 
+/** Typ po przejściu przez schema - driver ma już wartość domyślną. */
+export interface NormalizedModelConfig extends Omit<ModelConfig, 'driver'> {
+  driver: AuthorDriver;
+}
+
+export interface NormalizedGreenproofConfig extends Omit<GreenproofConfig, 'model'> {
+  model: NormalizedModelConfig;
+}
+
 export const DEFAULT_CONFIG: Pick<
   GreenproofConfig,
-  'caps' | 'qualityGates' | 'gates' | 'batching' | 'playwright'
+  'caps' | 'qualityGates' | 'gates' | 'batching' | 'authoring' | 'playwright'
 > = {
   caps: {
     maxTurns: 1000,
@@ -211,6 +248,10 @@ export const DEFAULT_CONFIG: Pick<
     timeoutPerCaseMin: 25,
     timeoutCapMin: 340,
     splitWarnAt: 12,
+  },
+  authoring: {
+    branchStrategy: 'per-case',
+    branchPrefix: 'author/',
   },
   playwright: {
     command: ['npx', 'playwright', 'test'],

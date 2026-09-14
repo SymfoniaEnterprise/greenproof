@@ -20,7 +20,14 @@ export const FixtureAuthorModelConfigSchema = z.object({
   authTokenEnv: z.string().min(1).exactOptional(),
 });
 
+export const CopilotCliConfigSchema = z.object({
+  command: z.string().min(1).exactOptional(),
+  maxAiCredits: z.number().positive().exactOptional(),
+  maxAutopilotContinues: z.number().int().nonnegative().exactOptional(),
+});
+
 export const ModelConfigSchema = z.object({
+  driver: z.enum(['claude-sdk', 'copilot-cli']).default('claude-sdk'),
   baseUrl: z.url().exactOptional(),
   authTokenEnv: z.string().min(1),
   author: z.string().min(1),
@@ -29,6 +36,7 @@ export const ModelConfigSchema = z.object({
   maxOutputTokens: z.number().int().positive().exactOptional(),
   priceTable: z.record(z.string(), ModelPriceSchema).exactOptional(),
   costModel: z.enum(['local', 'subscription', 'metered']).exactOptional(),
+  copilot: CopilotCliConfigSchema.exactOptional(),
 });
 
 export const SeedFuseConfigSchema = z.object({
@@ -84,6 +92,12 @@ export const BatchingConfigSchema = z.object({
   splitWarnAt: z.number().int().positive().default(D.batching.splitWarnAt),
 });
 
+/** Strategia gałęzi autora - per-case (domyślnie) vs jedna gałąź na run. */
+export const AuthoringConfigSchema = z.object({
+  branchStrategy: z.enum(['per-case', 'single']).default(D.authoring.branchStrategy),
+  branchPrefix: z.string().min(1).default(D.authoring.branchPrefix),
+});
+
 export const PathsConfigSchema = z.object({
   /** Jedyna ścieżka bez domyślnej wartości - musi ją podać użytkownik. */
   testsRepoDir: z.string().min(1),
@@ -128,6 +142,7 @@ export const GreenproofConfigSchema = z.object({
   qualityGates: QualityGatesSchema.prefault({}),
   gates: GatesConfigSchema.prefault({}),
   batching: BatchingConfigSchema.prefault({}),
+  authoring: AuthoringConfigSchema.prefault({}),
   playwright: PlaywrightConfigSchema.prefault({}),
   paths: PathsConfigSchema,
   knowledge: KnowledgeConfigSchema.exactOptional(),

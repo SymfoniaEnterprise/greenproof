@@ -18,6 +18,7 @@ import { buildAuthorHooks } from './hooks.js';
 import { createGreenproofServer } from './tools.js';
 import { authorSystemPrompt, buildAuthorPrompt } from './prompt.js';
 import { mcpServerCommand } from '../util/exec.js';
+import { runCopilotAuthorSession } from './copilotSession.js';
 
 const AUTHOR_RESULT_SCHEMA = {
   type: 'object',
@@ -115,7 +116,7 @@ export function sdkBudgetUsd(
   return config.model.priceTable ? caps.maxCostUsd * 20 : caps.maxCostUsd;
 }
 
-export async function runAuthorSession(opts: AuthorSessionOptions): Promise<AuthorSessionResult> {
+async function runClaudeAuthorSession(opts: AuthorSessionOptions): Promise<AuthorSessionResult> {
   const { config, context, secrets, logger, clock } = opts;
   const caps = config.caps;
   const state = new AuthorSessionState();
@@ -385,4 +386,11 @@ export async function runAuthorSession(opts: AuthorSessionOptions): Promise<Auth
     durationMs: Date.now() - started,
     messagesPath,
   };
+}
+
+export async function runAuthorSession(opts: AuthorSessionOptions): Promise<AuthorSessionResult> {
+  if (opts.config.model.driver === 'copilot-cli') {
+    return runCopilotAuthorSession(opts);
+  }
+  return runClaudeAuthorSession(opts);
 }

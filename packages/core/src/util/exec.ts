@@ -8,9 +8,12 @@
  * wywołujemy wprost `node.exe` ze skryptem CLI. Pozostałe komendy trafiają do
  * `spawn` jako rozdzielone argv, bez powłoki.
  */
-import { spawn, type ChildProcess } from 'node:child_process';
+import { createRequire } from 'node:module';
+import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+
+const crossSpawn = createRequire(import.meta.url)('cross-spawn') as typeof nodeSpawn;
 
 function isWindows(): boolean {
   return process.platform === 'win32';
@@ -30,6 +33,9 @@ export interface SpawnArgv {
  * `execFileP(command, args, { cwd, ...options })`.
  */
 export function spawnArgv(command: string, args: readonly string[]): SpawnArgv {
+  if (/\.(?:c|m)?js$/i.test(command)) {
+    return { command: process.execPath, args: [command, ...args], options: {} };
+  }
   const direct = packageManagerDirect(command, args);
   return direct === undefined ? { command, args: [...args], options: {} } : { ...direct, options: {} };
 }
@@ -94,6 +100,8 @@ export interface RunOutcome {
   timedOut: boolean;
   /** Awaria samego SPAWNU (ENOENT/EINVAL) - to nie to samo, co niezerowy kod. */
   spawnError?: NodeJS.ErrnoException;
+  /** Proces nie wyemitował żadnych danych przed watchdogiem startu. */
+  timedOutBeforeOutput?: boolean;
 }
 
 export interface RunOptions {
@@ -103,6 +111,16 @@ export interface RunOptions {
   timeoutMs: number;
   /** Z `spawnArgv` - linia poleceń złożona ręcznie. */
   windowsVerbatimArguments?: true;
+  /** Przechwyć stdout procesu przez callback zamiast kierować go do `ignore`. */
+  onStdout?: (chunk: string) => void;
+  /** Przechwyć stderr procesu przez callback zamiast kierować go do `ignore`. */
+  onStderr?: (chunk: string) => void;
+  /** Twardy watchdog startu; osobny od limitu całej sesji. */
+  firstOutputTimeoutMs?: number;
+  /** Dla sesji strumieniowych: dane są wyjściem dopiero po spełnieniu predykatu. */
+  firstOutputReady?: () => boolean;
+  /** Zewnętrzny kill switch, np. cap tur sesji Copilot. */
+  abortSignal?: AbortSignal;
 }
 
 /** Żywe drzewa procesów - do sprzątnięcia, gdy host dostanie sygnał. */
@@ -125,7 +143,7 @@ function killTree(child: ChildProcess, signal: NodeJS.Signals): void {
     // taskkill /T. Sam `child.kill()` osierociłby potomków, zanim taskkill
     // zdąży ich policzyć, więc leci dopiero jako fallback.
     try {
-      const tk = spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
+      const tk = nodeSpawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
       tk.once('error', () => {
         try {
           child.kill();
@@ -190,11 +208,28 @@ export function runToCompletion(
 ): Promise<RunOutcome> {
   return new Promise((resolve) => {
     let child: ChildProcess;
+    let timedOutBeforeOutput = false;
+    let timedOut = false;
+    let hardKill: ReturnType<typeof setTimeout> | undefined;
+    let firstOutputSeen = false;
+    let firstOutputTimer: ReturnType<typeof setTimeout> | undefined;
+    const markOutput = (chunk: Buffer | string, callback?: (value: string) => void): void => {
+      callback?.(chunk.toString());
+      if (firstOutputSeen || (opts.firstOutputReady !== undefined && !opts.firstOutputReady())) return;
+      firstOutputSeen = true;
+      if (firstOutputTimer !== undefined) {
+        clearTimeout(firstOutputTimer);
+        firstOutputTimer = undefined;
+      }
+    };
+
     try {
-      child = spawn(command, [...args], {
+      child = crossSpawn(command, [...args], {
         cwd: opts.cwd,
         env: opts.env,
-        stdio: 'ignore',
+        stdio: opts.onStdout !== undefined || opts.onStderr !== undefined
+          ? ['ignore', opts.onStdout !== undefined ? 'pipe' : 'ignore', opts.onStderr !== undefined ? 'pipe' : 'ignore']
+          : 'ignore',
         // POSIX: własna grupa procesów, żeby dało się ubić CAŁE drzewo.
         detached: !isWindows(),
         ...(opts.windowsVerbatimArguments !== undefined
@@ -214,24 +249,61 @@ export function runToCompletion(
     liveTrees.add(child);
     hookHostSignals();
 
-    let timedOut = false;
-    let hardKill: ReturnType<typeof setTimeout> | undefined;
-    const softKill = setTimeout(() => {
+    if (opts.onStdout !== undefined && child.stdout !== null) {
+      child.stdout.on('data', (chunk: Buffer | string) => markOutput(chunk, opts.onStdout));
+    }
+    if (opts.onStderr !== undefined && child.stderr !== null) {
+      child.stderr.on('data', (chunk: Buffer | string) => markOutput(chunk, opts.onStderr));
+    }
+    if (opts.firstOutputTimeoutMs !== undefined) {
+      firstOutputTimer = setTimeout(() => {
+        if (firstOutputSeen) return;
+        timedOutBeforeOutput = true;
+        timedOut = true;
+        killTree(child, 'SIGTERM');
+        hardKill = setTimeout(() => killTree(child, 'SIGKILL'), HARD_KILL_DELAY_MS);
+        hardKill.unref();
+      }, opts.firstOutputTimeoutMs);
+      firstOutputTimer.unref();
+    }
+
+    let softKill: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
       timedOut = true;
       killTree(child, 'SIGTERM');
       hardKill = setTimeout(() => killTree(child, 'SIGKILL'), HARD_KILL_DELAY_MS);
       hardKill.unref();
     }, opts.timeoutMs);
+    softKill.unref();
 
     let settled = false;
+    const abortChild = (): void => {
+      if (settled) return;
+      if (softKill !== undefined) {
+        clearTimeout(softKill);
+        softKill = undefined;
+      }
+      killTree(child, 'SIGTERM');
+      hardKill = setTimeout(() => killTree(child, 'SIGKILL'), HARD_KILL_DELAY_MS);
+      hardKill.unref();
+    };
     const settle = (outcome: RunOutcome): void => {
       if (settled) return;
       settled = true;
-      clearTimeout(softKill);
+      if (softKill !== undefined) clearTimeout(softKill);
       if (hardKill !== undefined) clearTimeout(hardKill);
+      if (firstOutputTimer !== undefined) clearTimeout(firstOutputTimer);
+      if (opts.abortSignal !== undefined && abortListener !== undefined) {
+        opts.abortSignal.removeEventListener('abort', abortListener);
+      }
       liveTrees.delete(child);
-      resolve(outcome);
+      resolve({ ...outcome, ...(timedOutBeforeOutput ? { timedOutBeforeOutput: true } : {}) });
     };
+
+    const abortListener = (): void => abortChild();
+    if (opts.abortSignal !== undefined) {
+      if (opts.abortSignal.aborted) abortChild();
+      else opts.abortSignal.addEventListener('abort', abortListener, { once: true });
+    }
 
     child.once('error', (err) => {
       settle({

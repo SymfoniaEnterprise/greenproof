@@ -3,12 +3,11 @@
  * Golden path: pełna pętla greenproof (filter → triage → author → deliver →
  * accept → release) na adapter-fs przeciw appce DemoPay (~/dev/demopay-demo).
  *
- * Użycie: node scripts/golden-path.mjs --model deepseek|qwen|opus|gemini|luna [--cases 1|2]
+ * Użycie: node scripts/golden-path.mjs --model deepseek|qwen|opus|gemini [--cases 1|2]
  * Workdir jest trwały: ~/.local/share/greenproof/runs/<runId> (backlog §1).
  *  - deepseek: przez bramę LiteLLM (env LITELLM_KEY albo GREENPROOF_GATEWAY_KEY)
  *  - opus: poświadczenia Claude z HOME (subskrypcja), model claude-opus-latest
  *  - gemini: gemini-3.6-flash z darmowego progu AI Studio przez bramę LiteLLM
- *  - luna: gpt-5.6-luna przez lokalny CLIProxyAPI (subskrypcja OAuth, bez LiteLLM)
  */
 import { execFile, spawn } from 'node:child_process';
 import { mkdir, writeFile, readFile, cp } from 'node:fs/promises';
@@ -183,10 +182,6 @@ const MODELS = {
     author: 'gemini-3.6-flash', baseUrl: 'http://127.0.0.1:4000', tokenEnv: 'LITELLM_KEY', costModel: 'metered',
     priceTable: { 'gemini-3.6-flash': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 } },
     caps: { maxTimeMinutes: 90 },
-  },
-  luna: {
-    author: 'gpt-5.6-luna', baseUrl: 'http://127.0.0.1:8317', tokenEnv: 'CLIPROXY_TOKEN', costModel: 'subscription',
-    priceTable: { 'gpt-5.6-luna': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 } },
   },
   opus: { author: 'claude-opus-5', costModel: 'subscription' },
   // Sonnet 5 tą samą drogą co Opus: poświadczenia Claude z HOME, bez bramy.

@@ -93,6 +93,8 @@ async function makeHarness(
   capsOverride: Record<string, unknown> = {},
   phase: AuthorPhase = 'assert',
   pwOverride: Record<string, unknown> = {},
+  driver: 'claude-sdk' | 'copilot-cli' = 'claude-sdk',
+  churnProne = false,
 ): Promise<Harness> {
   const cwd = await mkdtemp(join(tmpdir(), 'gp-pw-repo-'));
   const attemptDir = await mkdtemp(join(tmpdir(), 'gp-pw-attempt-'));
@@ -103,7 +105,7 @@ async function makeHarness(
   const config = GreenproofConfigSchema.parse({
     platform: 'fake',
     plan: { source: 'json' },
-    model: { authTokenEnv: 'T', author: 'tani-model' },
+    model: { driver, authTokenEnv: 'T', author: 'tani-model' },
     paths: { testsRepoDir: cwd },
     caps: { maxPlaywrightRuns: 2, proofRuns: 2, ...capsOverride },
     playwright: { command: ['node', fakePwPath], ...pwOverride },
@@ -119,7 +121,7 @@ async function makeHarness(
     inventory: [],
     uiTraps: [],
     appMapViews: [],
-    churnProne: false,
+    churnProne,
     oracleFiles: [],
   };
   const state = new AuthorSessionState();
@@ -151,6 +153,26 @@ async function makeHarness(
     lastRun: (text) => JSON.parse(text.split('\n')[0]!) as Record<string, unknown>,
   };
 }
+
+describe('driver-aware guidance narzędzi', () => {
+  it('fixture fuse kieruje Copilota do sanitizowanej nazwy finish', async () => {
+    const h = await makeHarness(
+      { seedFuse: { churnProneTypes: ['lista-plac'], maxFailedStrategies: 1 } },
+      'arrange',
+      {},
+      'copilot-cli',
+      true,
+    );
+
+    const result = await h.call('report_seed_attempt', {
+      strategy: 'api',
+      outcome: 'failed',
+    });
+
+    expect(result).toContain('greenproof-finish');
+    expect(result).not.toContain('mcp__greenproof__finish');
+  });
+});
 
 /** Ustawia zachowanie fałszywego playwrighta na czas jednego wywołania. */
 function fakePw(opts: { mode?: string; report?: string; exit?: number; argvFile?: string }): void {

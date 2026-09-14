@@ -139,7 +139,7 @@ jobs:
       # --fixture-author none, żeby nie pytać bramy modeli o listę modeli.
       - name: grp run --init-only w katalogu ze spacją
         run: |
-          node packages\cli\dist\main.js run --tests-repo "$env:GP_TESTS_REPO" --init-only --fixture-author none
+          node packages\cli\dist\main.js run --tests-repo "$env:GP_TESTS_REPO" --init-only --preset litellm --fixture-author none
           if ($LASTEXITCODE -ne 0) { throw "run --init-only zwrocil $LASTEXITCODE" }
           foreach ($p in '.git', 'package.json', 'playwright.config.ts', 'greenproof.config.mjs', 'node_modules\@playwright\test') {
             $full = Join-Path $env:GP_TESTS_REPO $p
@@ -171,7 +171,7 @@ jobs:
       # artefaktów w adapter-fs (assertSafeKey) - na ścieżkach z literą dysku.
       - name: dane runu wylądowały w %LOCALAPPDATA%
         run: |
-          $base = Join-Path $env:LOCALAPPDATA 'greenproof\manual-codex-sub\platform'
+          $base = Join-Path $env:LOCALAPPDATA 'greenproof\manual-litellm\platform'
           foreach ($d in 'state', 'artifacts', 'reports') {
             $full = Join-Path $base $d
             if (-not (Test-Path -LiteralPath $full)) { throw "brak $full - dane nie trafily do %LOCALAPPDATA%" }
