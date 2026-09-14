@@ -132,7 +132,7 @@ od zera, reszta komend zgłosi błąd z podpowiedzią.
 ## 3. Sekrety
 
 Token czytany jest ze zmiennej środowiskowej o nazwie z configu
-(`model.authTokenEnv`: `LITELLM_KEY`, `CLIPROXY_TOKEN`, `ANTHROPIC_AUTH_TOKEN`).
+(`model.authTokenEnv`: `LITELLM_KEY`, `ANTHROPIC_AUTH_TOKEN`; preset `copilot` uwierzytelnia się przez `copilot login`, bez tokenu w env).
 Plik `.env` **obok configu** (np. `configs/.env`) CLI wczytuje automatycznie
 przed każdą komendą; zmienna już obecna w środowisku wygrywa. `.env` jest
 w `.gitignore` - nigdy go nie commituj i nie wypisuj jego zawartości.
@@ -275,7 +275,7 @@ grp clean --config <c> --in clean-in.json
 
 | Objaw | Przyczyna | Naprawa |
 |---|---|---|
-| `preflight` 401/403 | brak tokenu w env/`.env` albo wygasła sesja OAuth mostka | ustaw zmienną z `model.authTokenEnv`; dla CLIProxyAPI powtórz logowanie (`-codex-login`) |
+| `preflight` 401/403 | brak tokenu w env/`.env` albo wygasła sesja logowania | ustaw zmienną z `model.authTokenEnv` (np. `LITELLM_KEY`); dla presetu `copilot` powtórz `copilot login` |
 | `preflight` ok:false na `toolUse` | endpoint gubi `tool_use` | zmień model/kanał - sesje autora bez tool-callingu nie ruszą |
 | exit 2: `--tests-repo nie jest repozytorium git (brak .git)` | `run --init-only` dostał katalog bez `.git` | `git init` w repo testów albo użyj `run --tests-repo` (scaffolduje sam) |
 | exit 2: plan nie da się sparsować | `--in` z plikiem spoza formatów configu (`plan.source` nie potrafi go zjeść) | popraw plik planu albo ustaw `plan.source`/`plan.module` na właściwy parser |

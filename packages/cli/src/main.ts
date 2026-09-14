@@ -197,7 +197,7 @@ export function helpText(): string {
 
 UŻYCIE
   grp <komenda> --config <ścieżka> [--run <runId>] [--in <in.json>] [--out <out.json>]
-  grp run --tests-repo <ścieżka> --init-only [--preset codex-sub|litellm|claude-sub]
+  grp run --tests-repo <ścieżka> --init-only [--preset copilot|litellm|claude-sub]
                  [--config <output.mjs>] [--author <model>] [--base-url <url>]
                  [--token-env <ENV>] [--fixture-author <model>|auto|none] [--force]
   grp run (--config <gotowy config> | --tests-repo <dir> [--preset …] [--author …])
@@ -248,8 +248,9 @@ KOMENDY
              Wymaga ArtifactStore z delete (adapter-fs tak; GitHub - nie, exit 2);
              bez ScmPort.deleteBranch branche tylko odnotowane w branchNote.
   preflight  waliduje endpoint modelu z configu: ping /v1/messages + wymuszony tool-call
-             (mostki subskrypcyjne typu CLIProxyAPI często gubią tool_use - patrz
-             docs/model-bridges.md); exit 2 gdy endpoint niezdatny dla silnika autora.
+             (bramy/mostki potrafią gubić tool_use - patrz docs/model-bridges.md);
+             exit 2 gdy endpoint niezdatny dla silnika autora. Dla drivera copilot-cli
+             (preset copilot) preflight sprawdza zamiast tego dostępność Copilot CLI.
 
 FLAGI
   --config <p>  Plik konfiguracyjny: .json, .yaml/.yml, .mjs/.js/.cjs (export default).
@@ -258,8 +259,8 @@ FLAGI
                 katalogu z GREENPROOF_TESTS_REPO.
   --init-only   Dla \`run\`: wykonuje tylko scaffold repo testów i generowanie configu,
                 po czym kończy z kodem 0 (bez preflightu, filtra i sesji).
-  --preset <p>  Profil dla konfiguracji: codex-sub | litellm | claude-sub (domyślnie codex-sub).
-                codex-sub: CLIProxyAPI :8317 (subskrypcja przez mostek OAuth), luna(max)+sol(high)
+  --preset <p>  Profil dla konfiguracji: copilot | litellm | claude-sub (domyślnie litellm).
+                copilot: oficjalny GitHub Copilot CLI (copilot login), gpt-5.6-luna + eskalacja gpt-5.6-terra
                 litellm: brama LiteLLM :4000, model z bramy + eskalacja claude-sonnet-5
                 claude-sub: Claude (subskrypcja z HOME albo API), claude-opus-5
   --tests-repo <p> Repozytorium git testów. Cel konfiguracji lub kotwica do
@@ -587,7 +588,7 @@ async function dispatch(
 
   if (effective === 'preflight') {
     // Walidacja endpointu modelu (ping + tool-call) - bez portów platformy,
-    // działa dla bramy, mostka subskrypcyjnego (np. CLIProxyAPI) i API wprost.
+    // działa dla bramy modeli (np. LiteLLM) i API Anthropic wprost.
     return runPreflight(loaded.config, envSecrets);
   }
 

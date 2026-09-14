@@ -8,12 +8,12 @@ Pełny opis pól: `docs/config-reference.md`. Mostki subskrypcyjne:
 
 | Preset | Kanał | `baseUrl` | Token (`authTokenEnv`) | Kiedy |
 |---|---|---|---|---|
-| `codex-sub` (domyślny) | CLIProxyAPI - subskrypcja przez mostek OAuth | `http://127.0.0.1:8317` | `CLIPROXY_TOKEN` | masz subskrypcję asystenta CLI i mostek; koszt $ realnie 0 |
-| `litellm` | brama LiteLLM | `http://127.0.0.1:4000` | `LITELLM_KEY` | chcesz budżetów klucza wirtualnego, telemetrii i fallbacków; modele deepseek/lokalne |
+| `litellm` (domyślny) | brama LiteLLM | `http://127.0.0.1:4000` | `LITELLM_KEY` | chcesz budżetów klucza wirtualnego, telemetrii i fallbacków; modele deepseek/lokalne |
+| `copilot` | oficjalne GitHub Copilot CLI (driver `copilot-cli`) | brak | brak (`copilot login`) | masz subskrypcję GitHub Copilot; autor `gpt-5.6-luna`, eskalacja `gpt-5.6-terra`; koszt $ realnie 0 |
 | `claude-sub` | API Anthropic wprost (albo poświadczenia Claude z HOME) | brak | `ANTHROPIC_AUTH_TOKEN` | najmocniejszy autor, koszt liczony realnie |
 
 Gotowe configi referencyjne: `configs/litellm.config.mjs`,
-`configs/codex.config.mjs`, `configs/claude.config.mjs` (opis pól:
+`configs/copilot.config.mjs`, `configs/claude.config.mjs` (opis pól:
 `docs/config-reference.md`). Generator własnego: `grp run --tests-repo <ścieżka> --init-only --preset <p>` (repo musi mieć `.git`).
 
 ## 2. Zmiana modelu - dwie drogi
@@ -23,7 +23,7 @@ pierwszorazowej konfiguracji z `--tests-repo` bez `--config`):
 
 ```sh
 grp run --tests-repo <p> --init-only --preset litellm --author claude-sonnet-5
-grp run --tests-repo <p> --preset codex-sub --author 'gpt-5.6-luna(max)' \
+grp run --tests-repo <p> --preset copilot --author gpt-5.6-luna \
        --in plan.json --app-url <url>
 ```
 
@@ -47,7 +47,6 @@ awaryjny bez configu:
 
 ```sh
 curl -s http://127.0.0.1:4000/v1/models -H "Authorization: Bearer $LITELLM_KEY"
-curl -s http://127.0.0.1:8317/v1/models -H "Authorization: Bearer $CLIPROXY_TOKEN"
 ```
 
 ## 3. Zmiana providera
@@ -150,11 +149,6 @@ ograniczeniem kosztu. Najpierw diagnoza z ledgera.
 
 ## 7. Efforty (reasoning)
 
-- **CLIProxyAPI**: sufiks w NAZWIE modelu - `gpt-5.6-luna(max)`,
-  `gpt-5.6-sol(high)`. Forma z myślnikiem (`-high`) NIE działa. Najwyższy
-  działający poziom sprawdzaj empirycznie na danym mostku. Bez sufiksu backend
-  bierze swój domyślny effort (zwykle medium) - psuje to porównania modeli.
-  `priceTable` kluczuj bazową nazwą (`'gpt-5.6-luna'`).
 - **Brama LiteLLM**: efforty przez DEDYKOWANY wpis modelu z `reasoning_effort`
   na sztywno w `litellm_params` (osobny alias per effort) - nie przez
   sufiks w nazwie.

@@ -121,8 +121,9 @@ obecnie jako public preview.
   - `local` - model na własnym sprzęcie. Cap SDK **nie jest ustawiany**;
     granicą są `maxTurns` i `maxTimeMinutes` (SDK wyceniłoby darmowy run
     cennikiem Anthropic i ubiło go na capie kosztowym).
-  - `subscription` - mostek do abonamentu (CLIProxyAPI, subskrypcja
-    Claude). Per token nie płacimy, ale limit zużycia istnieje → odbojnik
+  - `subscription` - model z abonamentu (oficjalny GitHub Copilot CLI,
+    subskrypcja Claude albo dowolna brama subskrypcyjna, np. za LiteLLM).
+    Per token nie płacimy, ale limit zużycia istnieje → odbojnik
     zostaje (`maxCostUsd × 20` z `priceTable`, inaczej `maxCostUsd`).
   - `metered` - zwykłe API rozliczane per token.
 

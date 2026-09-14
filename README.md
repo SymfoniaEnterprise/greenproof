@@ -92,10 +92,9 @@ Wolisz ustawić wszystko sam - tu są presety, configi i wymagania:
 
 - **Szybki start: `run --init-only` + `run`** - presety providerów, przykłady komend i
   krok po kroku: **[docs/configuration.md](docs/configuration.md)**
-- **Gotowe configi startowe** - `litellm.config.mjs` (brama LiteLLM),
-  `codex.config.mjs` (subskrypcja przez mostek OAuth), `claude.config.mjs`
-  (Anthropic/Claude wprost) oraz `copilot.config.mjs` (oficjalny GitHub Copilot CLI)
-  : **[docs/configuration.md](docs/configuration.md)**
+- **Gotowe configi startowe** - `litellm.config.mjs` (brama LiteLLM, domyślny),
+  `claude.config.mjs` (Anthropic/Claude wprost) oraz `copilot.config.mjs`
+  (oficjalny GitHub Copilot CLI): **[docs/configuration.md](docs/configuration.md)**
 - **Wymagania środowiska** - co runner musi mieć zainstalowane:
   **[docs/runner-requirements.md](docs/runner-requirements.md)**
 
@@ -291,9 +290,9 @@ Presety providerów, flagi, wejście komend i zmienne środowiskowe:
 [docs/configuration.md](docs/configuration.md). Pole po polu, co znaczy każde
 ustawienie w configu: [docs/config-reference.md](docs/config-reference.md).
 
-- `grp run --tests-repo <p> --init-only [--preset codex-sub|litellm|claude-sub]` -
-  generuje config; każde pole modelu nadpiszesz flagą (`--author`,
-  `--base-url`, `--token-env`, `--fixture-author <model>|none`).
+- `grp run --tests-repo <p> --init-only [--preset litellm|claude-sub|copilot]` -
+  generuje config (domyślny preset: `litellm`); każde pole modelu nadpiszesz flagą
+  (`--author`, `--base-url`, `--token-env`, `--fixture-author <model>|none`).
 - `grp run` - preflight → filter → triage → fixture → author → deliver →
   auto-accept w jednym procesie; `release` to osobna, świadoma decyzja
   człowieka (auto-akceptację wyłączysz flagą `--no-auto-accept` albo
@@ -357,14 +356,16 @@ per case w Job Summary.
 ## 7. Integracja z providerami i modelami
 
 Silnik autora wymaga dowolnego endpointu w formacie Anthropic (`/v1/messages`).
-Modele z subskrypcji wchodzą przez lokalne mostki OAuth →
-endpoint, np. **CLIProxyAPI**. Przed pierwszym runem obowiązkowy
-`grp preflight`. Pełny opis: [docs/model-bridges.md](docs/model-bridges.md).
+Modele w stylu subskrypcyjnym (GPT-5.6 Luna/Sol/Terra) wchodzą przez oficjalny
+GitHub Copilot CLI (preset `copilot`). Przed pierwszym runem endpointowym
+obowiązkowy `grp preflight`. Pełny opis (wzorzec bramy i LiteLLM):
+[docs/model-bridges.md](docs/model-bridges.md).
 
-- **CLIProxyAPI** - modele z subskrypcji przez `http://127.0.0.1:<port>/v1/messages`.
-- **LiteLLM** - budżety kluczy wirtualnych, telemetria, fallbacki; model z bramy
-  + eskalacja np. `claude-sonnet-5`.
+- **LiteLLM** (domyślny) - budżety kluczy wirtualnych, telemetria, fallbacki;
+  model z bramy + eskalacja np. `claude-sonnet-5`.
 - **Anthropic wprost** - bez `baseUrl`, token z subskrypcji CLI.
+- **Oficjalny GitHub Copilot CLI** - modele GPT-5.6 (Luna/Sol/Terra) po
+  `copilot login`; bez endpointu HTTP, autor jako osobny proces `copilot -p`.
 
 ## 8. Silnik sesji
 

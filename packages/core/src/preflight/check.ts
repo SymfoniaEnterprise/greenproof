@@ -2,7 +2,7 @@
  * Preflight endpointu modelu - walidacja PRZED odpaleniem sesji autora.
  * Dwa stopnie: (1) zwykły ping /v1/messages, (2) wymuszony tool-call -
  * silnik autora żyje z narzędzi, a to właśnie tool-calling najczęściej
- * kuleje w bramach i mostkach subskrypcyjnych (np. CLIProxyAPI).
+ * kuleje w bramach modeli (np. LiteLLM).
  */
 import type { GreenproofConfig } from '../config/types.js';
 import type { SecretsPort } from '../ports/index.js';

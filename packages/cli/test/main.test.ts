@@ -40,10 +40,10 @@ describe('parseArgs', () => {
 
   it('czyta flagi boolowskie --force i --init-only bez wartości', () => {
     expect(
-      parseArgs(['run', '--tests-repo', '/tmp/tests', '--config', 'gp.mjs', '--preset=codex-sub', '--init-only', '--force']),
+      parseArgs(['run', '--tests-repo', '/tmp/tests', '--config', 'gp.mjs', '--preset=copilot', '--init-only', '--force']),
     ).toMatchObject({
       command: 'run',
-      preset: 'codex-sub',
+      preset: 'copilot',
       testsRepo: '/tmp/tests',
       config: 'gp.mjs',
       initOnly: true,
@@ -578,39 +578,44 @@ describe('run', () => {
     expect(bareIo.err.join('')).toMatch(/init/);
   });
 
-  it('run --init-only tworzy ładowalny config Luna, odmawia overwrite i honoruje --force', async () => {
+  it('run --init-only --preset copilot: config Luna dla Copilot CLI, odmawia overwrite i honoruje --force', async () => {
     const repoDir = await initRepo();
     const workDir = await tmpDir('gp-cli-init-');
     const configFile = join(workDir, 'generated', 'greenproof.config.mjs');
 
     const io = capture();
     expect(
-      await run(
-        // --base-url na zamknięty port wymusza fallback auto → preset
-        // (deterministycznie, bez zależności od tego, co słucha na :8317).
-        ['run', '--tests-repo', repoDir, '--init-only', '--config', configFile, '--base-url', 'http://127.0.0.1:1'],
-        io.options,
-      ),
+      // Copilot nie ma listy /v1/models, więc eskalacja idzie prosto z presetu
+      // (deterministycznie, bez --base-url i bez zapytania o listę modeli).
+      await run(['run', '--tests-repo', repoDir, '--init-only', '--preset', 'copilot', '--config', configFile], io.options),
     ).toBe(0);
     const output = JSON.parse(io.out.join('')) as {
       path: string;
       preset: string;
       testsRepoDir: string;
       author: string;
+      baseUrl: string | null;
       fixtureAuthor: string;
       fixtureAuthorSource: string;
     };
     expect(output).toMatchObject({
       path: configFile,
-      preset: 'codex-sub',
+      preset: 'copilot',
       testsRepoDir: repoDir,
-      author: 'gpt-5.6-luna(max)',
-      fixtureAuthor: 'gpt-5.6-sol(high)',
+      author: 'gpt-5.6-luna',
+      baseUrl: null,
+      fixtureAuthor: 'gpt-5.6-terra',
       fixtureAuthorSource: 'preset',
     });
 
     const source = await readFile(configFile, 'utf8');
     expect(source).not.toMatch(/sk-[A-Za-z0-9]/);
+    // Driver copilot-cli: config musi nieść driver, blok copilot i costModel,
+    // a NIE baseUrl (Copilot nie jest endpointem OpenAI/Anthropic).
+    expect(source).toContain('driver: "copilot-cli"');
+    expect(source).toContain('maxAutopilotContinues: 5');
+    expect(source).toContain('costModel: "subscription"');
+    expect(source).not.toMatch(/^\s*baseUrl:/m);
     // Wygenerowany config bywa commitowany i uruchamiany na innej platformie
     // niż ta, na której powstał - musi rozgałęziać się W RUNTIME, a nie mieć
     // wpisanego wyniku dla platformy generującej.
@@ -621,7 +626,10 @@ describe('run', () => {
     const loaded = await loadConfig(configFile);
     expect(loaded.config.platform).toBe('@greenproof/adapter-fs');
     expect(loaded.config.paths.testsRepoDir).toBe(repoDir);
-    expect(loaded.config.model.authTokenEnv).toBe('CLIPROXY_TOKEN');
+    expect(loaded.config.model.driver).toBe('copilot-cli');
+    expect(loaded.config.model.authTokenEnv).toBe('COPILOT_GITHUB_TOKEN');
+    expect(loaded.config.model.costModel).toBe('subscription');
+    expect(loaded.config.model.copilot).toEqual({ maxAutopilotContinues: 5 });
     expect(loaded.config.caps.maxTurns).toBe(400);
     expect(loaded.config.caps.fixtureSession).toEqual({
       maxTurns: 80,
@@ -630,14 +638,16 @@ describe('run', () => {
     });
 
     const overwrite = capture();
-    expect(await run(['run', '--tests-repo', repoDir, '--init-only', '--config', configFile], overwrite.options)).toBe(2);
+    expect(
+      await run(['run', '--tests-repo', repoDir, '--init-only', '--preset', 'copilot', '--config', configFile], overwrite.options),
+    ).toBe(2);
     expect(overwrite.out).toEqual([]);
     expect(overwrite.err.join('')).toMatch(/już istnieje/);
 
     const forced = capture();
     expect(
       await run(
-        ['run', '--tests-repo', repoDir, '--init-only', '--config', configFile, '--force', '--base-url', 'http://127.0.0.1:1'],
+        ['run', '--tests-repo', repoDir, '--init-only', '--preset', 'copilot', '--config', configFile, '--force'],
         forced.options,
       ),
     ).toBe(0);
@@ -705,11 +715,11 @@ describe('run', () => {
     });
   });
 
-  it('run --init-only: --fixture-author auto wybiera z listy /v1/models wg rankingu (case-insensitive, sufiks zachowany)', async () => {
+  it('run --init-only: --fixture-author auto wybiera z listy /v1/models wg rankingu (case-insensitive, wpis z rankingu)', async () => {
     const server = await startFakeServer((req, res) => {
       res.statusCode = 200;
       res.setHeader('content-type', 'application/json');
-      res.end(JSON.stringify({ object: 'list', data: [{ id: 'GPT-5.6-LUNA' }, { id: 'GPT-5.6-SOL' }] }));
+      res.end(JSON.stringify({ object: 'list', data: [{ id: 'CLAUDE-OPUS-5' }, { id: 'GPT-5.6-SOL' }] }));
     });
 
     try {
@@ -721,19 +731,20 @@ describe('run', () => {
       expect(
         await run(
           [
-            'run', '--tests-repo', repoDir, '--init-only', '--preset', 'codex-sub', '--config', configFile,
+            'run', '--tests-repo', repoDir, '--init-only', '--preset', 'litellm', '--config', configFile,
             '--base-url', `http://127.0.0.1:${server.port}`, '--fixture-author', 'auto',
           ],
           io.options,
         ),
       ).toBe(0);
       const output = JSON.parse(io.out.join('')) as { fixtureAuthor: string | null; fixtureAuthorSource: string };
-      // Pierwszy z rankingu codex-sub (gpt-5.6-sol(high)) pasuje po nazwie bazowej
-      // bez względu na wielkość liter; do configu idzie wpis rankingu (z sufiksem).
-      expect(output).toMatchObject({ fixtureAuthor: 'gpt-5.6-sol(high)', fixtureAuthorSource: 'endpoint' });
+      // Ranking litellm: claude-sonnet-5 (nieobecny na liście) → claude-opus-5,
+      // który pasuje po nazwie bazowej bez względu na wielkość liter; do configu
+      // idzie wpis z rankingu (małymi), nie id z endpointu.
+      expect(output).toMatchObject({ fixtureAuthor: 'claude-opus-5', fixtureAuthorSource: 'endpoint' });
 
       const loaded = await loadConfig(configFile);
-      expect(loaded.config.model.fixtureAuthor).toEqual({ model: 'gpt-5.6-sol(high)' });
+      expect(loaded.config.model.fixtureAuthor).toEqual({ model: 'claude-opus-5' });
     } finally {
       await server.close();
     }
@@ -785,14 +796,14 @@ describe('run', () => {
       expect(
         await run(
           [
-            'run', '--tests-repo', repoDir, '--init-only', '--preset', 'codex-sub', '--config', configFile,
+            'run', '--tests-repo', repoDir, '--init-only', '--preset', 'litellm', '--config', configFile,
             '--base-url', `http://127.0.0.1:${server.port}`,
           ],
           io.options,
         ),
       ).toBe(0);
       const output = JSON.parse(io.out.join('')) as { fixtureAuthor: string | null; fixtureAuthorSource: string };
-      expect(output).toMatchObject({ fixtureAuthor: 'gpt-5.6-sol(high)', fixtureAuthorSource: 'preset' });
+      expect(output).toMatchObject({ fixtureAuthor: 'claude-sonnet-5', fixtureAuthorSource: 'preset' });
       expect(io.err.join('')).toMatch(/lista modeli niedostępna/);
     } finally {
       await server.close();
@@ -848,7 +859,7 @@ describe('run', () => {
     expect(
       await run(
         [
-          'run', '--tests-repo', repoDir, '--init-only', '--preset', 'codex-sub', '--config', configFile,
+          'run', '--tests-repo', repoDir, '--init-only', '--preset', 'litellm', '--config', configFile,
           '--fixture-author', 'gpt-5.6-sol',
         ],
         io.options,
@@ -867,7 +878,7 @@ describe('run', () => {
     expect(
       await run(
         [
-          'run', '--tests-repo', repoDir, '--init-only', '--preset', 'codex-sub', '--config', configFile,
+          'run', '--tests-repo', repoDir, '--init-only', '--preset', 'litellm', '--config', configFile,
           '--fixture-author', 'deepseek-v4-pro',
         ],
         io.options,
@@ -1007,7 +1018,7 @@ describe('run', () => {
     const repoDir = await initRepo();
     const io = capture();
     expect(await run(['run', '--preset', 'zmyslony', '--tests-repo', repoDir, '--init-only'], io.options)).toBe(2);
-    expect(io.err.join('')).toMatch(/codex-sub, litellm, claude-sub/);
+    expect(io.err.join('')).toMatch(/copilot, litellm, claude-sub/);
 
     const misuse = capture();
     expect(await run(['status', '--author', 'x', '--config', 'nie-ma.json'], misuse.options)).toBe(2);

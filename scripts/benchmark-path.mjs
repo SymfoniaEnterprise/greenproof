@@ -4,9 +4,8 @@
  * (~/dev/hr-payroll-demo, plan examples/benchmark-plan.json, 10 case'ów)
  * z fallbackiem fixture-author (eskalacja per model).
  *
- * Użycie: node scripts/benchmark-path.mjs --model deepseek|luna|qwen38 [--keep]
+ * Użycie: node scripts/benchmark-path.mjs --model deepseek|qwen38 [--keep]
  *  - deepseek: deepseek-v4-flash (brama LiteLLM) + fixture-author claude-opus-5 (subskrypcja)
- *  - luna:     gpt-5.6-luna (CLIProxyAPI)       + fixture-author gpt-5.6-sol (CLIProxyAPI)
  *  - qwen38:   qwen3.8 lokalnie (Lemonade→llama.cpp) + fixture-author z bramy (GP_FIXTURE_MODEL)
  */
 import { execFile, spawn } from 'node:child_process';
@@ -60,15 +59,6 @@ const MODELS = {
     author: FIXTURE_MODEL, baseUrl: 'http://127.0.0.1:4000', tokenEnv: 'LITELLM_KEY',
     priceTable: { [FIXTURE_MODEL]: { inPerMTok: 0.075, outPerMTok: 0.3, cacheReadPerMTok: 0.0075 } },
     fixtureAuthor: { model: 'claude-opus-5' },
-  },
-  luna: {
-    // costModel: subskrypcja - kwoty nie płacimy per token, ale limit
-    // zużycia istnieje, więc odbojnik kosztowy SDK zostaje (inaczej niż przy
-    // modelach lokalnych, gdzie fantomowa wycena SDK ubijała darmowe runy).
-    author: 'gpt-5.6-luna(max)', baseUrl: 'http://127.0.0.1:8317', tokenEnv: 'CLIPROXY_TOKEN', costModel: 'subscription',
-    priceTable: { 'gpt-5.6-luna': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 }, 'gpt-5.6-sol': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 } },
-    // Sufiks (high) w nazwie = reasoning effort tłumaczony przez CLIProxyAPI.
-    fixtureAuthor: { model: 'gpt-5.6-sol(high)', baseUrl: 'http://127.0.0.1:8317', authTokenEnv: 'CLIPROXY_TOKEN' },
   },
   qwen38: {
     // Lokalny Qwen3.8-27B przez Lemonade (llama.cpp) za bramą. costModel: local,

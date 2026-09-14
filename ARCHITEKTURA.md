@@ -277,7 +277,7 @@ Oba prompty składa kod, w chwili startu sesji, z dwóch źródeł:
 ### Model i sekret idą przez env sesji
 
 SDK rozmawia z endpointem wskazanym w configu - `ANTHROPIC_BASE_URL` dostaje
-`model.baseUrl` (brama LiteLLM, mostek OAuth albo nic dla Anthropic wprost),
+`model.baseUrl` (brama LiteLLM albo nic dla Anthropic wprost),
 `ANTHROPIC_AUTH_TOKEN` - sekret ze zmiennej `model.authTokenEnv`. W CI
 wystarczy więc podać ten sam sekret w `env` joba, którego config oczekuje
 lokalnie: to jedyna różnica konfiguracyjna między terminalem a runnerem.
@@ -289,8 +289,9 @@ lokalnie: to jedyna różnica konfiguracyjna między terminalem a runnerem.
 | sekret z `model.authTokenEnv` w env joba | token bramy/mostka dla sesji SDK |
 | dostęp sieciowy do `model.baseUrl` i appki | runner musi widzieć endpoint modelu i testowaną aplikację |
 
-Mostki OAuth (CLIProxyAPI) słuchają na localhoście - w CI realnym wyborem
-jest brama dostępna z runnera albo API wprost.
+Lokalne mostki i CLI subskrypcyjne (np. oficjalny GitHub Copilot CLI) działają
+tylko na localhoście - w CI realnym wyborem jest brama dostępna z runnera albo
+API wprost.
 
 ---
 

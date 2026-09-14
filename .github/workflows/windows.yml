@@ -171,7 +171,7 @@ jobs:
       # artefaktów w adapter-fs (assertSafeKey) - na ścieżkach z literą dysku.
       - name: dane runu wylądowały w %LOCALAPPDATA%
         run: |
-          $base = Join-Path $env:LOCALAPPDATA 'greenproof\manual-codex-sub\platform'
+          $base = Join-Path $env:LOCALAPPDATA 'greenproof\manual-litellm\platform'
           foreach ($d in 'state', 'artifacts', 'reports') {
             $full = Join-Path $base $d
             if (-not (Test-Path -LiteralPath $full)) { throw "brak $full - dane nie trafily do %LOCALAPPDATA%" }
