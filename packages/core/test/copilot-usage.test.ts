@@ -38,4 +38,20 @@ describe('priceCopilotUsage', () => {
 
     expect(priceCopilotUsage(config, usage)).toBe(4);
   });
+
+  it('uses CLI-reported cost with the empty table generated for Copilot', () => {
+    const config = GreenproofConfigSchema.parse({
+      platform: 'fake',
+      plan: { source: 'json' },
+      model: {
+        authTokenEnv: 'TOKEN',
+        author: 'copilot-model',
+        costModel: 'metered',
+        priceTable: {},
+      },
+      paths: { testsRepoDir: '/tmp/tests' },
+    });
+
+    expect(priceCopilotUsage(config, usage)).toBe(4);
+  });
 });

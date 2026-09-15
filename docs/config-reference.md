@@ -97,6 +97,11 @@ capów) oraz `playwright` (`@playwright/mcp`). Powłoka jest blokowana przez
 `--deny-tool=shell`; zapis stanu sesji i transcript JSONL zostają w katalogu
 próby.
 
+Preset `copilot` ustawia `costModel: 'metered'` i pustą `priceTable`. W tym
+wariancie Greenproof pokazuje estymatę z `total_cost_usd` raportowanego przez
+Copilot CLI w `usage-output-file`; nie oznacza runu jako darmowego tylko dlatego,
+że dostęp do CLI pochodzi z subskrypcji.
+
 Przykład: `configs/copilot.config.mjs`. ACP nie jest wymagany przez ten driver;
 został pozostawiony jako osobna opcja integracji, ponieważ GitHub oznacza go
 obecnie jako public preview.

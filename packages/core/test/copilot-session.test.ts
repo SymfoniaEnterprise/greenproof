@@ -70,7 +70,7 @@ server.stdout.on('data', (chunk) => {
       if (usageArg) {
         writeFileSync(
           usageArg.slice('--usage-output-file='.length),
-          JSON.stringify({ total_cost_usd: serverName === 'greenproof-fixture' ? 0.25 : 0 }),
+          JSON.stringify({ total_cost_usd: serverName === 'greenproof-fixture' ? 0.25 : 0.75 }),
         );
       }
       process.stdout.write(JSON.stringify({ type: 'assistant.turn_start' }) + '\n');
@@ -205,6 +205,7 @@ describe('runCopilotAuthorSession - granica CLI/MCP', () => {
     expect(result.resultSubtype).toBe('success');
     expect(result.structured).toMatchObject({ status: 'delivered', specPath: 'tests/e2e/fake.spec.ts' });
     expect(result.state.turns).toBe(1);
+    expect(result.state.costUsd).toBeCloseTo(0.75);
   });
 
   it('nie dostarcza finish, gdy CLI kończy się kodem niezerowym', async () => {

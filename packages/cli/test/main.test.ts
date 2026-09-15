@@ -614,7 +614,7 @@ describe('run', () => {
     // a NIE baseUrl (Copilot nie jest endpointem OpenAI/Anthropic).
     expect(source).toContain('driver: "copilot-cli"');
     expect(source).toContain('maxAutopilotContinues: 5');
-    expect(source).toContain('costModel: "subscription"');
+    expect(source).toContain('costModel: "metered"');
     expect(source).not.toMatch(/^\s*baseUrl:/m);
     // Wygenerowany config bywa commitowany i uruchamiany na innej platformie
     // niż ta, na której powstał - musi rozgałęziać się W RUNTIME, a nie mieć
@@ -628,7 +628,8 @@ describe('run', () => {
     expect(loaded.config.paths.testsRepoDir).toBe(repoDir);
     expect(loaded.config.model.driver).toBe('copilot-cli');
     expect(loaded.config.model.authTokenEnv).toBe('COPILOT_GITHUB_TOKEN');
-    expect(loaded.config.model.costModel).toBe('subscription');
+    expect(loaded.config.model.costModel).toBe('metered');
+    expect(loaded.config.model.priceTable).toEqual({});
     expect(loaded.config.model.copilot).toEqual({ maxAutopilotContinues: 5 });
     expect(loaded.config.caps.maxTurns).toBe(400);
     expect(loaded.config.caps.fixtureSession).toEqual({
