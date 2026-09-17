@@ -53,7 +53,7 @@ import { packageVersion } from './version.js';
 import { createProgressRenderer } from './progress/index.js';
 import type { RendererIo } from './progress/index.js';
 import { FilterInputSchema, runPreflight } from '@greenproof/core';
-import type { ProgressSink } from '@greenproof/core';
+import type { PreflightResult, ProgressSink } from '@greenproof/core';
 
 export interface ParsedArgs {
   command: string | undefined;
@@ -75,6 +75,7 @@ export interface ParsedArgs {
   force: boolean;
   cases: boolean;
   noAutoAccept: boolean;
+  skipPreflight: boolean;
   help: boolean;
   version: boolean;
 }
@@ -124,6 +125,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     force: false,
     cases: false,
     noAutoAccept: false,
+    skipPreflight: false,
     help: false,
     version: false,
   };
@@ -158,6 +160,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
       parsed.noAutoAccept = true;
       continue;
     }
+    if (token === '--skip-preflight') {
+      parsed.skipPreflight = true;
+      continue;
+    }
     const eq = token.indexOf('=');
     const name = eq === -1 ? token.slice(2) : token.slice(2, eq);
     if (name === 'init-only') {
@@ -171,6 +177,9 @@ export function parseArgs(argv: string[]): ParsedArgs {
     }
     if (name === 'no-auto-accept') {
       throw new CliError('Flaga --no-auto-accept nie przyjmuje wartości.');
+    }
+    if (name === 'skip-preflight') {
+      throw new CliError('Flaga --skip-preflight nie przyjmuje wartości.');
     }
     if (!VALUE_FLAGS.has(name)) {
       throw new CliError(`Nieznana flaga: --${name}. Użyj --help.`);
@@ -284,6 +293,13 @@ FLAGI
   --cases       Dla \`status\`: dokłada per-case rollup z ledgerów (cases + totals).
   --no-auto-accept  Dla \`run\`: wyłącza automatyczną akceptację case'ów po deliver
                 (stare zachowanie - człowiek klika \`accept\` per case).
+  --skip-preflight  Dla \`run\`: OMIJA bramkę preflight. Świadomy escape hatch dla
+                providerów subskrypcyjnych (np. \`claude-sub\` bez tokenu - sesja
+                autora dziedziczy logowanie z HOME), gdzie generyczny preflight
+                zawsze wraca czerwony (wymaga tokenu, pinguje /v1/messages) mimo
+                że sesja by działała. Nie pomija żadnej realnej walidacji poza
+                tym jednym przypadkiem - ryzyko i zgodność z regulaminem
+                providera zostają po stronie operatora (docs/model-bridges.md).
   --help, -h    Ta pomoc.   --version, -v   Wersja pakietu.
 
 ŚRODOWISKO
@@ -461,6 +477,13 @@ async function dispatch(
     );
   }
 
+  // --skip-preflight omija bramkę tylko w orkiestracji run (jak --no-auto-accept).
+  if (effective !== 'run' && args.skipPreflight) {
+    throw new CliError(
+      'Flaga --skip-preflight jest dostępna wyłącznie dla komendy run.',
+    );
+  }
+
   // --no-auto-accept wyłącza auto-akceptację tylko w orkiestracji run.
   if (effective !== 'run' && args.noAutoAccept) {
     throw new CliError(
@@ -604,9 +627,35 @@ async function dispatch(
 
   // Jednokomendowy run wykonuje preflight przed pierwszą mutacją stanu.
   // Porty są nadal tworzone tylko raz i przekazywane wszystkim krokom.
-  const runPreflightResult = effective === 'run'
-    ? await runPreflight(loaded.config, envSecrets)
-    : undefined;
+  // --skip-preflight: świadome ominięcie bramki na wyraźne żądanie operatora.
+  // Preflight generyczny (bez copilot-cli) zawsze wymaga tokenu i pinguje
+  // wprost /v1/messages - nie ma ścieżki dla providerów subskrypcyjnych, gdzie
+  // sesja autora dziedziczy logowanie z HOME (Claude Agent SDK spawnuje
+  // wbudowaną binarkę Claude Code, patrz packages/core/src/author/session.ts).
+  // Dla takich configów preflight zawsze wróci czerwony niezależnie od tego,
+  // czy sesja by faktycznie zadziałała - stąd świadomy escape hatch, nie próba
+  // udawania walidacji, której to narzędzie nie umie wykonać. Zgodność z
+  // regulaminem providera i ryzyko zostają po stronie operatora (patrz
+  // docs/model-bridges.md, sekcja "Zgodność z regulaminem dostawcy").
+  let runPreflightResult: PreflightResult | undefined;
+  if (effective === 'run') {
+    if (args.skipPreflight) {
+      logger.info(
+        '--skip-preflight: bramka preflight OMINIĘTA na wyraźne żądanie operatora. ' +
+          'Sesje autora mogą i tak nie zadziałać (np. providery subskrypcyjne bez tokenu) ' +
+          '- to świadome ryzyko operatora, nie zweryfikowany stan.',
+      );
+      runPreflightResult = {
+        endpoint: loaded.config.model.baseUrl ?? 'https://api.anthropic.com',
+        model: loaded.config.model.author,
+        ping: { ok: true, error: 'preflight pominięty flagą --skip-preflight' },
+        toolUse: { ok: true, error: 'preflight pominięty flagą --skip-preflight' },
+        ok: true,
+      };
+    } else {
+      runPreflightResult = await runPreflight(loaded.config, envSecrets);
+    }
+  }
 
   // Niezdatny endpoint jest błędem walidacji autora, nie błędem adaptera.
   // Nie inicjalizujemy platformy ani nie wykonujemy żadnej mutacji stanu, gdy

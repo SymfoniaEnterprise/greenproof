@@ -209,6 +209,20 @@ async function runClaudeAuthorSession(opts: AuthorSessionOptions): Promise<Autho
 
   const sdkBudget = sdkBudgetUsd(config, caps);
 
+  // Tryb bramy (authToken+baseUrl): sesja efemeryczna, izolowana od
+  // ~/.claude/settings.json operatora (settingSources: []) - reprodukowalna,
+  // config sam niesie endpoint/token. Tryb subskrypcyjny (HOME-inherited,
+  // bez authToken): sesja i tak dziedziczy poświadczenia z HOME, więc
+  // izolacja od settings.json tylko szkodzi - firmowe bramy BYOK/LiteLLM
+  // (ANTHROPIC_BASE_URL, nagłówki proxy) żyją tam w polu `env`, dokładnie
+  // jak w zwykłym `claude -p`. Wczytujemy tylko poziom 'user' (nie
+  // 'project'/'local' z cwd repo testów, który do tej sesji nie należy).
+  // UWAGA: to świadomie odchodzi od izolacji - sesja autora odziedziczy też
+  // hooki/inne ustawienia operatora z ~/.claude/settings.json, nie tylko
+  // routing modelu. Decyzja operatora (nie cofać bez rozmowy).
+  const settingSources: NonNullable<Options['settingSources']> =
+    authToken !== undefined ? [] : ['user'];
+
   const options: Options = {
     model: config.model.author,
     cwd: opts.cwd,
@@ -216,7 +230,7 @@ async function runClaudeAuthorSession(opts: AuthorSessionOptions): Promise<Autho
     maxTurns: caps.maxTurns,
     ...(sdkBudget !== undefined ? { maxBudgetUsd: sdkBudget } : {}),
     abortController: controller,
-    settingSources: [],
+    settingSources,
     strictMcpConfig: true,
     persistSession: false,
     permissionMode: 'bypassPermissions',
