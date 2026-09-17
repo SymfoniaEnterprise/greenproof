@@ -357,16 +357,22 @@ per case w Job Summary.
 ## 7. Integracja z providerami i modelami
 
 Silnik autora wymaga dowolnego endpointu w formacie Anthropic (`/v1/messages`).
-Modele w stylu subskrypcyjnym (GPT-5.6 Luna/Sol/Terra) wchodzą przez oficjalny
-GitHub Copilot CLI (preset `copilot`). Przed pierwszym runem endpointowym
-obowiązkowy `grp preflight`. Pełny opis (wzorzec bramy i LiteLLM):
-[docs/model-bridges.md](docs/model-bridges.md).
+Modele w stylu subskrypcyjnym (GPT-5.6 Luna/Sol/Terra, i modele Claude przez
+ten sam CLI) wchodzą przez oficjalny GitHub Copilot CLI (preset `copilot`).
+Przed pierwszym runem endpointowym obowiązkowy `grp preflight`. Pełny opis
+(wzorzec bramy i LiteLLM): [docs/model-bridges.md](docs/model-bridges.md).
+Gotowe, kopiuj-wklej przepisy do przełączania między trybami (z dokładnymi
+komendami): [`skills/greenproof-config.md`](skills/greenproof-config.md) §0.
 
-- **LiteLLM** (domyślny) - budżety kluczy wirtualnych, telemetria, fallbacki;
-  model z bramy + eskalacja np. `claude-sonnet-5`.
-- **Anthropic wprost** - bez `baseUrl`, token z subskrypcji CLI.
-- **Oficjalny GitHub Copilot CLI** - modele GPT-5.6 (Luna/Sol/Terra) po
-  `copilot login`; bez endpointu HTTP, autor jako osobny proces `copilot -p`.
+- **LiteLLM** - budżety kluczy wirtualnych, telemetria, fallbacki; model z
+  bramy + eskalacja np. `claude-sonnet-5`. Wymaga statycznego klucza (`sk-...`).
+- **Oficjalny GitHub Copilot CLI** (zweryfikowany, domyślny wybór) - modele
+  GPT-5.6 (Luna/Sol/Terra) i Claude (Sonnet/Opus) po `copilot login`; bez
+  endpointu HTTP, autor jako osobny proces.
+- **Anthropic wprost / sesja dziedziczona z HOME** - bez `baseUrl`, bez
+  tokenu; ⚠️ **eksperymentalne, oba znane blokery naprawione, end-to-end
+  jeszcze niepotwierdzone** - status: `docs/model-bridges.md`, sekcja
+  "Wariant subskrypcyjny".
 
 ## 8. Silnik sesji
 

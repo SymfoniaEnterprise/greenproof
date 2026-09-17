@@ -84,6 +84,70 @@ Komenda robi dwie rzeczy i zwraca exit 2, jeśli którakolwiek zawiedzie
 - **Zgodność z regulaminem dostawcy** - modele subskrypcyjne używaj zgodnie
   z ToS dostawcy; decyzja i ryzyko po stronie użytkownika.
 
+## Wariant subskrypcyjny: sesja dziedziczy logowanie Claude z HOME (STATUS: oba znane blokery naprawione, end-to-end jeszcze niepotwierdzone)
+
+> **To NIE jest jeszcze udokumentowana, gotowa ścieżka** - oba dotychczas
+> znalezione blokery (token proxy, routing modelu BYOK) są zaadresowane, ale
+> nikt jeszcze nie potwierdził pełnego, zielonego przebiegu `grp run` na
+> żywym przypadku E2E w tym trybie. Nie polecaj tego trybu operatorowi jako
+> gotowego, dopóki ta notka nie zostanie zaktualizowana po takim teście.
+
+Preset `claude-sub` bez ustawionego `authTokenEnv`/`baseUrl` nie jest bramą
+HTTP w ogóle - to osobna ścieżka. Sesja autora idzie przez oficjalny
+`@anthropic-ai/claude-agent-sdk` (`packages/core/src/author/session.ts`),
+który spawnuje **wbudowaną binarkę Claude Code jako podproces**, dziedziczącą
+`HOME`/`USERPROFILE` z procesu greenproof. Ta binarka sama zarządza swoim
+uwierzytelnieniem dokładnie tak jak przy zwykłym interaktywnym `claude` -
+OAuth (Team/Enterprise), subskrypcja indywidualna, albo cokolwiek innego, co
+ma skonfigurowane w `~/.claude/settings.json`. Greenproof **nie** czyta
+samodzielnie `~/.claude.json`/`~/.claude/.credentials.json` i **nie**
+wykonuje własnych wywołań `fetch`/`axios` do `api.anthropic.com` w tej
+ścieżce - jedyne miejsce z bezpośrednim klientem HTTP (`@anthropic-ai/sdk`)
+to poboczna funkcja digestu (`packages/core/src/ledger/digest.ts`), która
+wymaga jawnego tokenu i nie ma dostępu awaryjnego do poświadczeń z HOME.
+
+**Problem 1: `grp preflight` nie ma dla tego trybu ścieżki walidacji.** Bez
+`baseUrl` domyślnie celuje w `https://api.anthropic.com` i wymaga
+`x-api-key` - a to dokładnie ta ścieżka, której sesja autora w tym trybie NIE
+używa. Preflight generyczny zawsze wróci czerwony niezależnie od tego, czy
+sesja autora by faktycznie zadziałała. Escape hatch: `grp run --skip-preflight`
+(patrz `--help`) - świadomie omija TĘ JEDNĄ bramkę, na wyraźne żądanie
+operatora, dla TEGO JEDNEGO przypadku.
+
+**Problem 2 (zdiagnozowany, dwie oddzielne przyczyny - jedna naprawiona w
+kodzie, druga po stronie operatora/organizacji):**
+
+1. *Token proxy odrzucony* (`401 Invalid proxy server token passed... Unable
+   to find token in cache`) - wystąpił dwukrotnie, za każdym razem z innym
+   efemerycznym kluczem `sk-...`. Nie był to wygasły klucz do odświeżenia,
+   tylko coś w przepływie wydawania kluczy dla kont Team/BYOK tej organizacji,
+   co nie działało z izolowanym, nieinteraktywnym podprocesem. **Naprawione
+   po stronie operatora** (zmiana w jego `~/.claude/settings.json` /
+   `.credentials.json`) - potwierdzone ręcznym testem spawnu po naprawie.
+2. *Model BYOK nierozpoznany przez SDK* - nawet po naprawieniu (1), sesja
+   autora kończyła się `There's an issue with the selected model
+   (claude-sonnet-5-byok). It may not exist or you may not have access to
+   it.` Przyczyna: `runClaudeAuthorSession` wołał SDK z `settingSources: []`
+   (pełna izolacja od `~/.claude/settings.json`), więc sesja NIE dziedziczyła
+   `env.ANTHROPIC_BASE_URL`/nagłówków proxy operatora - uderzała wprost w
+   `api.anthropic.com`, gdzie alias modelu specyficzny dla firmowej bramy
+   (`*-byok`) nie istnieje. **Naprawione w kodzie**: dla trybu bez
+   `authToken`/`baseUrl` (czysto subskrypcyjnego, HOME-inherited)
+   `settingSources` to teraz `['user']`, nie `[]` - sesja czyta
+   `~/.claude/settings.json` operatora tak samo jak zwykłe `claude -p`.
+   Świadomy kompromis: sesja autora (autonomiczna, `bypassPermissions`)
+   odziedzicza też ewentualne hooki/inne ustawienia z tego pliku, nie tylko
+   routing modelu - `settingSources: []` zostaje bez zmian dla trybu z
+   jawnym `baseUrl`/tokenem (reprodukowalna izolacja, config sam niesie
+   endpoint).
+
+**Nadal nieskonfirmowane:** pełny, zielony przebieg `grp run` end-to-end w
+tym trybie (autoring rzeczywistego przypadku E2E). Przed poleceniem tego
+trybu operatorom: (1) potwierdź z zespołem platformowym zgodność z
+regulaminem licencji (Team/Enterprise czy subskrypcja indywidualna - patrz
+sekcja "Zgodność z regulaminem dostawcy" niżej), (2) potwierdź działającą
+sesję end-to-end na żywym przypadku testowym.
+
 ## Model o zerowym koszcie za LiteLLM
 
 Jeśli chcesz zachować budżety i telemetrię bramy dla modelu, za który nie
