@@ -16,10 +16,14 @@ testów (musi istnieć katalog `.git`). `--tests-repo` wskazuje **repo testów**
 miejsce, w którym greenproof zapisuje testy. Testowana aplikacja to co innego:
 podajesz ją przez `--app-url`.
 
-Presety to punkty startowe per provider - `litellm` (domyślny, brama LiteLLM),
-`claude-sub` (API Anthropic wprost) oraz `copilot` (oficjalny GitHub Copilot CLI,
-konfiguracja `configs/copilot.config.mjs`). KAŻDE pole modelu nadpiszesz flagą, więc dowolna kombinacja
-provider+model nie wymaga ręcznej edycji pliku:
+Presety to punkty startowe per provider. Zalecane na start: `claude-native`
+(Claude Code natywnie, dziedziczy logowanie z `~/.claude/settings.json` -
+subskrypcja albo firmowe proxy LiteLLM) i `copilot` (oficjalny GitHub Copilot
+CLI, konfiguracja `configs/copilot.config.mjs`). Zaawansowane: `litellm`
+(własny endpoint HTTP z jawnym kluczem wirtualnym bramy) i `claude-sub` (API
+Anthropic wprost, jawny `ANTHROPIC_AUTH_TOKEN` - tryb bramy reprodukowalny/CI).
+KAŻDE pole modelu nadpiszesz flagą, więc dowolna kombinacja provider+model nie
+wymaga ręcznej edycji pliku:
 
 **Preset `litellm` wymaga `--author`.** Aliasy modeli w bramie są
 instalacyjne - u każdego wpisy nazywają się inaczej - więc preset nie zgaduje
@@ -80,6 +84,17 @@ z `package.json` nie jest ruszane.
 
 Gotowe configi referencyjne do edycji leżą w [`configs/`](../configs/). Pełne
 demo od zera (appka + repo testów + config + run) to `pnpm demo` - patrz README.
+
+### Claude Code natywnie (`claude-native`)
+
+Config generowany przez `--preset claude-native` NIE ustawia `baseUrl` i
+oczekuje, że `ANTHROPIC_AUTH_TOKEN` zostanie NIEustawiony - sesja autora
+dziedziczy logowanie Claude Code z `~/.claude/settings.json` operatora
+(subskrypcja indywidualna, Team/Enterprise OAuth, albo firmowe proxy LiteLLM
+przez `env.ANTHROPIC_BASE_URL` w tym pliku). `grp preflight` sprawdza
+dostępność binarki `claude` i obecność `ANTHROPIC_BASE_URL` w tym pliku, bez
+wysyłania żadnego requestu - szczegóły i znane problemy:
+[`docs/model-bridges.md`](model-bridges.md), sekcja "Preset `claude-native`".
 
 ### Oficjalny GitHub Copilot CLI
 

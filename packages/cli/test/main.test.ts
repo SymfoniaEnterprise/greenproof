@@ -654,6 +654,69 @@ describe('run', () => {
     ).toBe(0);
   });
 
+  it('run --init-only --preset claude-native: Sonnet + eskalacja Opus 5.5, dziedziczy ~/.claude/settings.json (bez baseUrl)', async () => {
+    const repoDir = await initRepo();
+    const workDir = await tmpDir('gp-cli-init-');
+    const configFile = join(workDir, 'generated', 'greenproof.config.mjs');
+
+    const io = capture();
+    expect(
+      // Brak fixtureAuthorPreference: ten tryb nie ma endpointu /v1/models do
+      // odpytania, eskalacja idzie prosto z presetu (deterministycznie).
+      await run(['run', '--tests-repo', repoDir, '--init-only', '--preset', 'claude-native', '--config', configFile], io.options),
+    ).toBe(0);
+    const output = JSON.parse(io.out.join('')) as {
+      path: string;
+      preset: string;
+      testsRepoDir: string;
+      author: string;
+      baseUrl: string | null;
+      fixtureAuthor: string;
+      fixtureAuthorSource: string;
+    };
+    expect(output).toMatchObject({
+      path: configFile,
+      preset: 'claude-native',
+      testsRepoDir: repoDir,
+      author: 'claude-sonnet-5-byok',
+      baseUrl: null,
+      fixtureAuthor: 'claude-opus-5-5-byok',
+      fixtureAuthorSource: 'preset',
+    });
+
+    const source = await readFile(configFile, 'utf8');
+    expect(source).not.toMatch(/sk-[A-Za-z0-9]/);
+    // Ani driver, ani baseUrl: ten tryb zostaje na domyślnym claude-sdk i nie
+    // niesie endpointu - sesja dziedziczy logowanie z ~/.claude/settings.json.
+    expect(source).not.toMatch(/^\s*driver:/m);
+    expect(source).not.toMatch(/^\s*baseUrl:/m);
+    expect(source).toContain('costModel: "subscription"');
+    // Komentarz ostrzegający, że ustawienie tokenu zmienia tryb sesji.
+    expect(source).toContain('dziedziczy logowanie Claude Code');
+    expect(source).toContain('~/.claude/settings.json');
+    const loaded = await loadConfig(configFile);
+    expect(loaded.config.platform).toBe('@greenproof/adapter-fs');
+    expect(loaded.config.paths.testsRepoDir).toBe(repoDir);
+    expect(loaded.config.model.driver).toBe('claude-sdk');
+    expect(loaded.config.model.baseUrl).toBeUndefined();
+    expect(loaded.config.model.authTokenEnv).toBe('ANTHROPIC_AUTH_TOKEN');
+    expect(loaded.config.model.author).toBe('claude-sonnet-5-byok');
+    expect(loaded.config.model.fixtureAuthor).toEqual({ model: 'claude-opus-5-5-byok' });
+    expect(loaded.config.model.costModel).toBe('subscription');
+    // cmdInit dopisuje zerowe wpisy priceTable dla author i fixtureAuthor
+    // automatycznie (priceTableKey), tak jak dla claude-sub/copilot - capy
+    // kosztowe nie gryzą, dopóki operator nie wpisze realnych stawek.
+    expect(loaded.config.model.priceTable).toEqual({
+      'claude-sonnet-5-byok': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
+      'claude-opus-5-5-byok': { inPerMTok: 0, outPerMTok: 0, cacheReadPerMTok: 0 },
+    });
+    expect(loaded.config.caps.fixtureSession).toEqual({
+      maxTurns: 80,
+      maxTimeMinutes: 30,
+      maxCostUsd: 2.5,
+    });
+  });
+
   it('run --init-only --preset litellm: model z bramy + eskalacja claude-sonnet-5 (też przez bramę)', async () => {
     const repoDir = await initRepo();
     const workDir = await tmpDir('gp-cli-init-');
@@ -1019,7 +1082,7 @@ describe('run', () => {
     const repoDir = await initRepo();
     const io = capture();
     expect(await run(['run', '--preset', 'zmyslony', '--tests-repo', repoDir, '--init-only'], io.options)).toBe(2);
-    expect(io.err.join('')).toMatch(/copilot, litellm, claude-sub/);
+    expect(io.err.join('')).toMatch(/copilot, litellm, claude-sub, claude-native/);
 
     const misuse = capture();
     expect(await run(['status', '--author', 'x', '--config', 'nie-ma.json'], misuse.options)).toBe(2);

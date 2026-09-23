@@ -84,16 +84,19 @@ Komenda robi dwie rzeczy i zwraca exit 2, jeśli którakolwiek zawiedzie
 - **Zgodność z regulaminem dostawcy** - modele subskrypcyjne używaj zgodnie
   z ToS dostawcy; decyzja i ryzyko po stronie użytkownika.
 
-## Wariant subskrypcyjny: sesja dziedziczy logowanie Claude z HOME (STATUS: oba znane blokery naprawione, end-to-end jeszcze niepotwierdzone)
+## Preset `claude-native`: Claude Code natywnie, sesja dziedziczy logowanie z HOME
 
-> **To NIE jest jeszcze udokumentowana, gotowa ścieżka** - oba dotychczas
-> znalezione blokery (token proxy, routing modelu BYOK) są zaadresowane, ale
-> nikt jeszcze nie potwierdził pełnego, zielonego przebiegu `grp run` na
-> żywym przypadku E2E w tym trybie. Nie polecaj tego trybu operatorowi jako
-> gotowego, dopóki ta notka nie zostanie zaktualizowana po takim teście.
+> **Preflight ma dedykowaną ścieżkę walidacji** (`runClaudeNativePreflight` w
+> `packages/core/src/preflight/check.ts`), wzorem `copilot-cli`: sprawdza
+> binarkę Claude Code i obecność `env.ANTHROPIC_BASE_URL` w
+> `~/.claude/settings.json`, bez żadnego requestu sieciowego. Realny
+> ping+tool-use test zostaje odroczony do pierwszej sesji autora. **Nadal
+> nieskonfirmowane**: pełny, zielony przebieg `grp run` end-to-end na żywym
+> przypadku E2E (patrz klauzula na końcu tej sekcji).
 
-Preset `claude-sub` bez ustawionego `authTokenEnv`/`baseUrl` nie jest bramą
-HTTP w ogóle - to osobna ścieżka. Sesja autora idzie przez oficjalny
+Preset `claude-native` (albo `claude-sub` bez ustawionego `authTokenEnv`/
+`baseUrl` - ten sam mechanizm, dwa punkty wejścia) nie jest bramą HTTP w
+ogóle - to osobna ścieżka. Sesja autora idzie przez oficjalny
 `@anthropic-ai/claude-agent-sdk` (`packages/core/src/author/session.ts`),
 który spawnuje **wbudowaną binarkę Claude Code jako podproces**, dziedziczącą
 `HOME`/`USERPROFILE` z procesu greenproof. Ta binarka sama zarządza swoim
@@ -102,20 +105,27 @@ OAuth (Team/Enterprise), subskrypcja indywidualna, albo cokolwiek innego, co
 ma skonfigurowane w `~/.claude/settings.json`. Greenproof **nie** czyta
 samodzielnie `~/.claude.json`/`~/.claude/.credentials.json` i **nie**
 wykonuje własnych wywołań `fetch`/`axios` do `api.anthropic.com` w tej
-ścieżce - jedyne miejsce z bezpośrednim klientem HTTP (`@anthropic-ai/sdk`)
-to poboczna funkcja digestu (`packages/core/src/ledger/digest.ts`), która
-wymaga jawnego tokenu i nie ma dostępu awaryjnego do poświadczeń z HOME.
+ścieżce (poza preflightem, który tylko CZYTA plik lokalnie) - jedyne miejsce
+z bezpośrednim klientem HTTP (`@anthropic-ai/sdk`) to poboczna funkcja
+digestu (`packages/core/src/ledger/digest.ts`), która wymaga jawnego tokenu i
+nie ma dostępu awaryjnego do poświadczeń z HOME.
 
-**Problem 1: `grp preflight` nie ma dla tego trybu ścieżki walidacji.** Bez
-`baseUrl` domyślnie celuje w `https://api.anthropic.com` i wymaga
-`x-api-key` - a to dokładnie ta ścieżka, której sesja autora w tym trybie NIE
-używa. Preflight generyczny zawsze wróci czerwony niezależnie od tego, czy
-sesja autora by faktycznie zadziałała. Escape hatch: `grp run --skip-preflight`
-(patrz `--help`) - świadomie omija TĘ JEDNĄ bramkę, na wyraźne żądanie
-operatora, dla TEGO JEDNEGO przypadku.
+**Problem 1 (ROZWIĄZANY): `grp preflight` miał dla tego trybu tylko ścieżkę
+generyczną.** Bez `baseUrl` ta ścieżka domyślnie celuje w
+`https://api.anthropic.com` i wymaga `x-api-key` - a to dokładnie ta ścieżka,
+której sesja autora w tym trybie NIE używa, więc zawsze wracała czerwona
+niezależnie od tego, czy sesja autora by faktycznie zadziałała.
+`runClaudeNativePreflight` rozpoznaje ten tryb (brak tokenu I brak `baseUrl`,
+ten sam warunek co w `session.ts`) i sprawdza zamiast tego dostępność binarki
+`claude` oraz obecność `env.ANTHROPIC_BASE_URL` w `~/.claude/settings.json`.
+`grp run --skip-preflight` zostaje w kodzie jako ogólny escape hatch dla
+przypadków, które nie pasują do rozpoznanego wzorca (np. `claude-sub` bez
+tokenu dla kogoś bez `~/.claude/settings.json` skonfigurowanego pod proxy -
+wtedy preflight może fałszywie ostrzec o braku `ANTHROPIC_BASE_URL`, mimo że
+czysta subskrypcja bez proxy działa bez tego pola).
 
-**Problem 2 (zdiagnozowany, dwie oddzielne przyczyny - jedna naprawiona w
-kodzie, druga po stronie operatora/organizacji):**
+**Problem 2 (zdiagnozowany, dwie oddzielne przyczyny - obie naprawione w
+kodzie, jedna też po stronie operatora/organizacji):**
 
 1. *Token proxy odrzucony* (`401 Invalid proxy server token passed... Unable
    to find token in cache`) - wystąpił dwukrotnie, za każdym razem z innym
@@ -139,7 +149,11 @@ kodzie, druga po stronie operatora/organizacji):**
    odziedzicza też ewentualne hooki/inne ustawienia z tego pliku, nie tylko
    routing modelu - `settingSources: []` zostaje bez zmian dla trybu z
    jawnym `baseUrl`/tokenem (reprodukowalna izolacja, config sam niesie
-   endpoint).
+   endpoint). **Ta sama naprawa dotyczyła tylko `runClaudeAuthorSession`** -
+   `runClaudeFixtureSession` (`packages/core/src/author/fixtureSession.ts`)
+   miał sztywne `settingSources: []` bezwarunkowo do czasu tej zmiany, więc
+   eskalacja fixture-gap w tym trybie trafiała ten sam błąd nierozpoznanego
+   aliasu BYOK. Teraz oba miejsca stosują ten sam warunek.
 
 **Nadal nieskonfirmowane:** pełny, zielony przebieg `grp run` end-to-end w
 tym trybie (autoring rzeczywistego przypadku E2E). Przed poleceniem tego

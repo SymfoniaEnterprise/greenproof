@@ -101,10 +101,19 @@ curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4000/v1/models   # Brama
 ```
 
 **Działanie**:
-Przedstaw dostępne presety i zaznacz, które endpointy odpowiedziały na maszynie:
-1. `litellm` (domyślny) - Brama LiteLLM (`http://127.0.0.1:4000`): dostęp do modeli chmurowych, lokalnych lub abonamentowych; domyślna eskalacja fixture do Claude Sonnet. (Status portu 4000: *dostępny / niedostępny*).
-2. `copilot` - Oficjalne GitHub Copilot CLI (driver `copilot-cli`): logowanie przez `copilot login` (bez endpointu HTTP), model autora `gpt-5.6-luna` + eskalacja fixture `gpt-5.6-terra`.
-3. `claude-sub` - API Anthropic wprost: subskrypcja z logowania Claude Code w katalogu domowym lub bezpośredni token Anthropic; domyślnie `claude-opus-5`, bez eskalacji fixture.
+Przedstaw dwa pierwszoklasowe presety:
+1. `claude-native` (zalecany dla operatorów z dostępem do Claude Code) - Claude Code natywnie,
+   dziedziczy logowanie z `~/.claude/settings.json` (subskrypcja indywidualna, Team/Enterprise
+   OAuth, albo firmowe proxy LiteLLM przez `ANTHROPIC_BASE_URL`); domyślnie `claude-sonnet-5-byok`
+   + eskalacja fixture `claude-opus-5-5-byok`. Preflight sprawdza binarkę Claude Code i obecność
+   routingu proxy w `~/.claude/settings.json`, bez wysyłania żadnego requestu sieciowego.
+2. `copilot` - Oficjalne GitHub Copilot CLI (driver `copilot-cli`): logowanie przez `copilot login`
+   (bez endpointu HTTP), model autora `gpt-5.6-luna` + eskalacja fixture `gpt-5.6-terra`.
+
+Zaawansowane (wspomnij tylko, jeśli użytkownik pyta o alternatywy albo żaden z dwóch powyższych mu
+nie pasuje): `litellm` dla własnego endpointu HTTP z jawnym kluczem wirtualnym bramy, `claude-sub`
+dla Claude z jawnym `ANTHROPIC_AUTH_TOKEN` (tryb bramy, reprodukowalny/CI). Opisane w
+`docs/model-bridges.md` i `skills/greenproof-config.md`.
 
 Zapytaj użytkownika o wybór presetu.
 
@@ -115,9 +124,13 @@ Zapytaj użytkownika o wybór presetu.
 **Cel**: Upewnić się, że token dla wybranego providera jest skonfigurowany, bez ujawniania jego wartości.
 
 **Zmienne per preset**:
+- Dla `claude-native`: **BRAK** - NIE ustawiaj `ANTHROPIC_AUTH_TOKEN`. To jest cały sens tego
+  trybu: sesja dziedziczy logowanie Claude Code z `~/.claude/settings.json` operatora. Ustawienie
+  tokenu przełączyłoby sesję z powrotem w izolowany tryb bramy (`settingSources: []`), który nie
+  widzi `ANTHROPIC_BASE_URL`/nagłówków proxy operatora zapisanych w tym pliku.
 - Dla `litellm`: `LITELLM_KEY`
 - Dla `copilot`: brak tokenu w env - uwierzytelnienie przez `copilot login` (placeholder `COPILOT_GITHUB_TOKEN`, jeśli config wymaga wpisu)
-- Dla `claude-sub`: `ANTHROPIC_AUTH_TOKEN` (opcjonalny, jeśli użytkownik jest zalogowany w Claude Code lokalnie)
+- Dla `claude-sub`: `ANTHROPIC_AUTH_TOKEN` (jawny token API - dla trybu HOME-inherited bez tokenu użyj presetu `claude-native` zamiast tego)
 
 **Jak wykryć**:
 Sprawdź, czy zmienna jest już zdefiniowana w środowisku:
@@ -256,15 +269,24 @@ Uruchom:
 grp preflight --config <sciezka-do-configu>
 ```
 
-Wyjaśnij użytkownikowi, co sprawdza preflight:
-1. **Ping `/v1/messages`**: Czy endpoint odpowiada w formacie Anthropic i czy token jest poprawny.
-2. **Wymuszony Tool-Call**: Czy model i brama poprawnie obsługują przekazywanie i wywoływanie narzędzi (`tool_use`).
+Wyjaśnij użytkownikowi, co sprawdza preflight - zależnie od presetu:
+- **`litellm`/`claude-sub` (endpoint HTTP)**: (1) **Ping `/v1/messages`** - czy endpoint odpowiada
+  w formacie Anthropic i czy token jest poprawny; (2) **Wymuszony Tool-Call** - czy model i brama
+  poprawnie obsługują przekazywanie i wywoływanie narzędzi (`tool_use`).
+- **`copilot`**: sprawdza tylko dostępność binarki (`copilot --version`) - realny tool-use test
+  jest odroczony do sesji autora i lokalnych serwerów MCP.
+- **`claude-native`**: sprawdza dostępność binarki Claude Code (`claude --version`) i obecność
+  `env.ANTHROPIC_BASE_URL` w `~/.claude/settings.json` operatora - bez wysyłania żadnego
+  requestu sieciowego. Realny ping+tool-use test jest odroczony do sesji autora, bo ten tryb nie
+  ma endpointu HTTP do samodzielnego odpytania przed uruchomieniem sesji.
 
 **Interpretacja wyniku**:
-- **Zielony (ok: true)**: Połączenie i narzędzia działają. Przejdź do Kroku 12.
+- **Zielony (ok: true)**: Warunki wstępne spełnione. Przejdź do Kroku 12.
 - **Czerwony (exit 2 / błąd)**: **ZATRZYMAJ SIĘ**.
-  - Błąd 401/403: Nieprawidłowy lub wygasły token w `.env`.
-  - Błąd braku `tool_use`: Mostek lub model gubi wywołania narzędzi (sesje autora nie będą działać).
+  - Błąd 401/403 (`litellm`/`claude-sub`): Nieprawidłowy lub wygasły token w `.env`.
+  - Błąd braku `tool_use` (`litellm`/`claude-sub`): Mostek lub model gubi wywołania narzędzi (sesje autora nie będą działać).
+  - Błąd binarki (`copilot`/`claude-native`): CLI nie jest zainstalowane/na PATH, albo nie odpowiada w limicie czasu.
+  - Brak `ANTHROPIC_BASE_URL` (`claude-native`): jeśli operator liczy na routing przez proxy firmowy, sprawdź `~/.claude/settings.json`; jeśli to czysta subskrypcja bez proxy, to ostrzeżenie może być nieszkodliwe.
   - Wyjaśnij przyczynę i pomóż użytkownikowi skorygować konfigurację przed pójściem dalej.
 
 ---
