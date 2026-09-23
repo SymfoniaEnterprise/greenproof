@@ -38,9 +38,11 @@ zanim zaczniesz działać.
 
 Zasady nadrzędne dla wszystkich skilli:
 
-- **Run odpala CZŁOWIEK w interaktywnym terminalu, nigdy agent w tle.** Agent
-  przygotowuje komendę i oddaje ją użytkownikowi; szczegóły i uzasadnienie:
-  `skills/greenproof-cli.md` §0a.
+- **Run odpala domyślnie CZŁOWIEK w interaktywnym terminalu.** Agent w sesji
+  z mechanizmem zadań w tle (start, podgląd stanu, przerwanie scoped
+  do własnego zadania) może odpalić go sam, pod warunkami z
+  `skills/greenproof-cli.md` §0a - nigdy samoczynnie, zawsze za jawną zgodą
+  użytkownika w tej samej turze.
 - Case'y z ważnym dowodem i czystym lintem przyjmuje SAM pipeline (auto-accept).
   Ręczny `accept` dotyczy tylko tych, których pipeline nie wziął (dowód
   nieważny, duplikat selektora, `blocked`) - i to, razem z `release` oraz

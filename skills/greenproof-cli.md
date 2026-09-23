@@ -6,32 +6,83 @@ Przepis operacyjny na uruchomienie przebiegu greenproof. Szczegóły pól config
 `docs/configuration.md`. Modele/mostki: `docs/model-bridges.md`. Pełna tabela
 komend i kodów wyjścia: `README.md`.
 
-## 0a. ZASADA: run odpala CZŁOWIEK w terminalu, nigdy agent w tle
+## 0a. ZASADA: kto odpala run - terminal domyślnie, agent z sesją zadaniową pod warunkami
 
-Przebieg greenproof uruchamia się **wyłącznie w interaktywnej sesji terminala
-użytkownika**. Agent AI podaje gotową komendę do skopiowania - i na tym kończy
-swoją rolę w starcie runu.
+**Domyślnie** przebieg greenproof uruchamia się **w interaktywnej sesji
+terminala użytkownika**. Agent AI podaje gotową komendę do skopiowania - i na
+tym kończy swoją rolę w starcie runu. To najprostsza, zawsze działająca
+ścieżka - obowiązuje w KAŻDYM środowisku, niezależnie od tego, jakimi
+narzędziami dysponuje dany agent.
 
-Agent NIE odpala runu:
-- w tle własnej sesji (`run_in_background`, `&`, `nohup`),
-- przez `systemd-run --user`,
-- ani w żaden inny sposób „za użytkownika".
+**Wyjątek**: agent działający w sesji, która ma WSZYSTKIE trzy poniższe
+możliwości, MOŻE odpalić `grp run` sam:
 
-Powód jest praktyczny, nie ceremonialny:
+1. sposób uruchomienia procesu w tle, śledzonego przez identyfikator TEJ sesji
+   (nie goły `nohup`/`&` bez uchwytu, po którym dałoby się go później odnaleźć),
+2. sposób odpytywania stanu bez wpatrywania się w surowy stdout procesu,
+3. sposób przerwania WYŁĄCZNIE zadania, które sama odpaliła - nigdy dowolnego
+   PID odgadniętego z listy procesów.
+
+Bez KTÓREGOKOLWIEK z tych trzech agent zostaje przy domyślnej ścieżce - poda
+komendę i odda start człowiekowi.
+
+Cztery powody, dla których ta zasada w ogóle istnieje - z nowej wersji nie
+znikają, zamieniają się w warunki, które agent-z-sesją-zadaniową musi sam
+sprawdzić, zamiast automatycznie oddawać start:
 
 - **Widok postępu ma sens tylko na TTY.** Renderer `tty` rysuje tablicę
-  odświeżaną w miejscu (cursor-up + erase-down). Bez terminala degraduje się do
-  strumienia linii, a wiadomość w czacie AI i tak się nie przerysowuje -
-  „podgląd na żywo" przez agenta to iluzja wymagająca ręcznego odpytywania.
-- **Run trwa godzinami** (lokalny model na trudnej appce: 4–10 h). Sesja agenta
-  nie jest do tego stworzona; procesy w tle bywają ubijane razem z nią.
-- **Przerwanie i wznowienie należy do człowieka.** Ctrl+C w terminalu jest
-  natychmiastowe i jednoznaczne; ubijanie procesów po PID z drugiej sesji
-  kończyło się już zabiciem cudzej pracy i osieroconymi żądaniami na GPU.
-- **Runy lokalne konkurują o jeden slot modelu.** Uruchomienie „w tle" przez
-  agenta ukrywa fakt zajętego GPU przed użytkownikiem, który zaraz odpali drugi.
+  odświeżaną w miejscu (cursor-up + erase-down); bez terminala CLI sam
+  degraduje się do strumienia linii (`GREENPROOF_PROGRESS=plain`, patrz
+  `packages/cli/src/progress/index.ts`) - agent i tak nigdy nie czyta surowego
+  stdout w locie, więc to nie jest argument przeciw, tylko wskazówka: ustaw
+  `plain` (albo `json`) jawnie, nigdy `tty`.
+- **Run trwa godzinami** (lokalny model na trudnej appce: 4-10 h). Proces w tle
+  MUSI być odpalony przez mechanizm zadaniowy tej sesji (warunek 1 wyżej) -
+  gołe `run_in_background`/`&`/`nohup` bez uchwytu, po którym harness albo
+  operator mogliby go odnaleźć, jest dokładnie tym, czego unikamy.
+- **Przerwanie i wznowienie.** Jeśli agent ma mechanizm z warunku 3 (przerywanie
+  WYŁĄCZNIE własnego zadania), korzysta z niego - nigdy z ręcznego
+  `kill`/`taskkill` po PID zgadniętym z listy procesów. To właśnie ubijanie po
+  domyślonym PID z drugiej sesji kończyło się już zabiciem cudzej pracy i
+  osieroconymi żądaniami na GPU - mechanizm scoped-do-własnego-zadania usuwa
+  ten problem u źródła, zgadywanie PID nie jest nigdy dozwolone, niezależnie od
+  tego, kto odpala run.
+- **Runy lokalne konkurują o jeden slot modelu.** Dotyczy WYŁĄCZNIE presetów z
+  lokalnym/GPU-bound modelem autora (`codex-sub`, albo dowolny inny preset z
+  `costModel: 'local'`) - tam agent PYTA użytkownika, czy slot jest wolny,
+  zanim odpali (nie potrafi tego sam zweryfikować). Presety chmurowe/
+  subskrypcyjne (`claude-native`, `litellm`, `copilot`) nie mają lokalnej
+  rywalizacji o zasób - ten krok wtedy odpada.
 
-Rola agenta przy starcie runu:
+Warunki, które agent-z-sesją-zadaniową MUSI spełnić PRZED odpaleniem (oprócz
+trzech możliwości technicznych wyżej):
+
+1. **Użytkownik poprosił o to jawnie, w tej samej turze** - nigdy samoczynnie
+   ani domyślnie. Ta sama bramka co każda inna ryzykowna/trudno odwracalna
+   akcja.
+2. Aplikacja testowana odpowiada i `grp preflight` jest zielony (bez zmian
+   względem dotychczasowych warunków wstępnych).
+3. **Brak innego znanego aktywnego runu** na tym samym `envUrl`/repo testów.
+   greenproof NIE ma blokady między-runowej w kodzie - lease (`acquireLease`,
+   `packages/core/src/machine/pipeline.ts`) chroni tylko JEDEN `runId` przy
+   wznowieniu po awarii, nie dwa niezależne runy. Sprawdź `grp status` dla
+   ostatnich runId (katalog stanu) i/albo zapytaj wprost, zanim odpalisz drugi.
+4. Dla presetów lokalnych/GPU-bound: zapytaj, czy slot jest wolny (patrz wyżej).
+5. `GREENPROOF_PROGRESS=plain` (albo `json`), nigdy `tty`.
+6. Monitoruj przez POLLING STANU (`grp status --config <c> --run <runId>`) -
+   dokładnie jak dziś zaleca się człowiekowi w `skills/greenproof-operator.md`
+   §7 - nigdy przez czytanie stdout procesu w locie.
+7. Przerywaj WYŁĄCZNIE przez mechanizm własnego zadania (warunek 3 wyżej).
+   Jeśli sesja, która odpaliła run, już nie istnieje, NIE zgaduj PID - zostaw
+   run, powiedz użytkownikowi, że trzeba go znaleźć i zatrzymać ręcznie
+   (dokładnie jak dziś przy runie człowieka w zamkniętym terminalu bez
+   `systemd-run`).
+8. Po starcie: powiedz użytkownikowi WPROST, że run poszedł w tło tej sesji,
+   podaj `runId` i ścieżkę logu/`--out`, przypomnij że zamknięcie/utrata tej
+   sesji może przerwać run - nie obiecuj przetrwania, którego nie potrafisz
+   zagwarantować z tego poziomu.
+
+Rola agenta przy starcie runu (ścieżka domyślna, terminal użytkownika):
 
 1. sprawdzić warunki wstępne (aplikacja odpowiada, model załadowany z właściwym
    kontekstem, GPU wolne),
@@ -41,7 +92,8 @@ Rola agenta przy starcie runu:
    `--out`), nie z własnego stdout.
 
 Wyjątek dotyczy wyłącznie krótkich sond diagnostycznych (preflight, `curl` do
-bramy, `grp status`) - te agent wykonuje sam, bo trwają sekundy i nic nie zajmują.
+bramy, `grp status`) - te agent wykonuje sam zawsze, niezależnie od powyższego,
+bo trwają sekundy i nic nie zajmują.
 
 ## 0. Warunek wstępny: aplikacja testowana MUSI działać
 
