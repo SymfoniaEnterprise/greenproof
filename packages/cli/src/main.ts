@@ -207,7 +207,7 @@ export function helpText(): string {
 
 UŻYCIE
   grp <komenda> --config <ścieżka> [--run <runId>] [--in <in.json>] [--out <out.json>]
-  grp run --tests-repo <ścieżka> --init-only [--preset copilot|litellm|claude-sub]
+  grp run --tests-repo <ścieżka> --init-only [--preset claude-native|copilot|litellm|claude-sub]
                  [--config <output.mjs>] [--author <model>] [--base-url <url>]
                  [--token-env <ENV>] [--fixture-author <model>|auto|none] [--force]
   grp run (--config <gotowy config> | --tests-repo <dir> [--preset …] [--author …])
@@ -269,10 +269,11 @@ FLAGI
                 katalogu z GREENPROOF_TESTS_REPO.
   --init-only   Dla \`run\`: wykonuje tylko scaffold repo testów i generowanie configu,
                 po czym kończy z kodem 0 (bez preflightu, filtra i sesji).
-  --preset <p>  Profil dla konfiguracji: codex-sub | copilot | litellm | claude-sub (domyślnie codex-sub; alias wsteczny).
+  --preset <p>  Profil dla konfiguracji: claude-native | copilot | litellm | claude-sub | codex-sub (domyślnie codex-sub; alias wsteczny).
+                claude-native: Claude Code natywnie (dziedziczy ~/.claude/settings.json - subskrypcja albo proxy firmowy), claude-sonnet-5-byok + eskalacja claude-opus-5-5-byok
                 copilot: oficjalny GitHub Copilot CLI (estymata kosztu z usage, copilot login), gpt-5.6-luna + eskalacja gpt-5.6-terra
                 litellm: brama LiteLLM :4000, model z bramy + eskalacja claude-sonnet-5
-                claude-sub: Claude (subskrypcja z HOME albo API), claude-opus-5
+                claude-sub: Claude z jawnym ANTHROPIC_AUTH_TOKEN (tryb bramy, reprodukowalny/CI), claude-opus-5
                 codex-sub: stary profil CLIProxyAPI, zachowany dla istniejących komend
   --tests-repo <p> Repozytorium git testów. Cel konfiguracji lub kotwica do
                 <p>/greenproof.config.mjs. Z jawnym --config ustawia GREENPROOF_TESTS_REPO.

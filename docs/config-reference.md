@@ -109,10 +109,15 @@ obecnie jako public preview.
 - **`authTokenEnv`** - nazwa zmiennej środowiskowej z tokenem. Wzorzec:
   `'LITELLM_KEY'` dla bramy, `'ANTHROPIC_AUTH_TOKEN'` dla SDK bezpośrednio.
   CLI czyta ją przez `SecretsPort.get(name)` - `process.env[name]` w
-  domyślnej konfiguracji.
+  domyślnej konfiguracji. Pole jest wymagane w schemacie, ale zmienna może
+  zostać NIEustawiona w środowisku - wtedy (z pominiętym `baseUrl`) sesja
+  autora przechodzi w tryb HOME-inherited: dziedziczy logowanie Claude Code
+  operatora z `~/.claude/settings.json` zamiast używać tokenu z configu
+  (preset `claude-native`, patrz `docs/model-bridges.md`).
 - **`baseUrl`** - adres bramy (np. `https://litellm.firma.pl`). Pominięte
-  = API Anthropic. NIE ustawiaj na adres Anthropic, jeśli chcesz korzystać
-  z bramy.
+  = API Anthropic bezpośrednio (albo, gdy `authTokenEnv` też jest
+  nieustawiony, tryb HOME-inherited opisany wyżej). NIE ustawiaj na adres
+  Anthropic, jeśli chcesz korzystać z bramy.
 - **`author`** - nazwa modelu widziana przez bramę. Niekoniecznie ta sama
   co nazwa w API Anthropic.
 - **`priceTable`** - własne liczenie kosztu. Źródło prawdy dla capa

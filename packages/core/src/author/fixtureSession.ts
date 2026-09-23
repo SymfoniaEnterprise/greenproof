@@ -191,7 +191,14 @@ async function runClaudeFixtureSession(deps: FixtureSessionDeps): Promise<Fixtur
     maxTurns: caps.maxTurns,
     maxBudgetUsd: config.model.priceTable ? caps.maxCostUsd * 20 : caps.maxCostUsd,
     abortController: controller,
-    settingSources: [],
+    // Tryb bramy (authToken+baseUrl): izolacja od ~/.claude/settings.json
+    // operatora, jak w session.ts. Tryb HOME-inherited (bez authToken): sesja
+    // dziedziczy poświadczenia z HOME niezależnie, więc izolacja tylko szkodzi
+    // - bez tego fixture-author w trybie subskrypcyjnym/proxy firmowego nie
+    // widział ANTHROPIC_BASE_URL/nagłówków operatora i padał na nierozpoznanym
+    // aliasie modelu BYOK (ten sam Problem 2.2 opisany w docs/model-bridges.md
+    // dla runClaudeAuthorSession, tu nienaprawiony do teraz).
+    settingSources: authToken !== undefined ? [] : ['user'],
     strictMcpConfig: true,
     persistSession: false,
     permissionMode: 'bypassPermissions',

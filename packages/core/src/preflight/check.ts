@@ -4,6 +4,9 @@
  * silnik autora żyje z narzędzi, a to właśnie tool-calling najczęściej
  * kuleje w bramach modeli (np. LiteLLM).
  */
+import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { GreenproofConfig } from '../config/types.js';
 import type { SecretsPort } from '../ports/index.js';
 import { copilotEnvironment } from '../author/copilotEnvironment.js';
@@ -98,6 +101,15 @@ export async function runPreflight(
 ): Promise<PreflightResult> {
   if (config.model.driver === 'copilot-cli') {
     return runCopilotCliPreflight(config, opts?.timeoutMs ?? 120_000);
+  }
+  const preToken = secrets.get(config.model.authTokenEnv);
+  // Tryb `claude-native`: brak tokenu I brak baseUrl - sesja autora dziedziczy
+  // logowanie Claude Code z ~/.claude/settings.json operatora (patrz
+  // session.ts, ten sam warunek decyduje o settingSources). Ping generyczny
+  // na api.anthropic.com bez x-api-key zawsze wróci 401, mimo że sesja by
+  // faktycznie zadziałała - stąd osobna ścieżka, wzorem runCopilotCliPreflight.
+  if (preToken === undefined && config.model.baseUrl === undefined) {
+    return runClaudeNativePreflight(config, opts?.timeoutMs ?? 30_000);
   }
   const endpoint = config.model.baseUrl ?? 'https://api.anthropic.com';
   const token = secrets.get(config.model.authTokenEnv);
@@ -199,6 +211,83 @@ async function runCopilotCliPreflight(
       ...(error !== undefined
         ? { error: note }
         : { error: 'Weryfikacja MCP następuje przy uruchomieniu sesji autora.' }),
+    },
+    ok,
+  };
+}
+
+/**
+ * Preflight dla trybu HOME-inherited (brak tokenu/baseUrl w configu - patrz
+ * runPreflight): sesja autora idzie przez @anthropic-ai/claude-agent-sdk, który
+ * spawnuje binarkę Claude Code jako podproces dziedziczący ~/.claude/settings.json
+ * operatora (routing modelu, ANTHROPIC_BASE_URL na proxy firmowy). Ping generyczny
+ * na api.anthropic.com nie ma tu sensu - ta ścieżka sprawdza tylko dwa warunki
+ * wstępne bez wysyłania żadnego requestu sieciowego: (1) binarka `claude` jest
+ * uruchamialna, (2) ~/.claude/settings.json istnieje i deklaruje ANTHROPIC_BASE_URL.
+ * Realny tool-use test jest odroczony do pierwszej sesji autora, analogicznie do
+ * runCopilotCliPreflight (linia 202 powyżej).
+ */
+async function runClaudeNativePreflight(
+  config: GreenproofConfig,
+  timeoutMs: number,
+): Promise<PreflightResult> {
+  const started = Date.now();
+  const spawned = spawnArgv('claude', ['--version']);
+  const output: string[] = [];
+  const outcome = await runToCompletion(spawned.command, spawned.args, {
+    cwd: process.cwd(),
+    env: process.env,
+    timeoutMs: Math.min(timeoutMs, 15_000),
+    ...spawned.options,
+    onStdout: (chunk) => output.push(chunk),
+    onStderr: (chunk) => output.push(chunk),
+  });
+  const exitError = outcome.exitCode === 0
+    ? undefined
+    : outcome.signal !== null
+      ? `Claude Code CLI zakończył się sygnałem ${outcome.signal}.`
+      : `Claude Code CLI zakończył się kodem ${String(outcome.exitCode)}.`;
+  const binaryError = outcome.spawnError?.message ??
+    (outcome.timedOut ? 'Claude Code CLI nie odpowiedział w limicie czasu.' : undefined) ??
+    exitError;
+
+  const settingsPath = join(homedir(), '.claude', 'settings.json');
+  let settingsError: string | undefined;
+  if (binaryError === undefined) {
+    try {
+      const raw = await readFile(settingsPath, 'utf8');
+      const parsed: unknown = JSON.parse(raw);
+      const baseUrl = (parsed as { env?: { ANTHROPIC_BASE_URL?: unknown } })?.env?.ANTHROPIC_BASE_URL;
+      if (typeof baseUrl !== 'string' || baseUrl.trim() === '') {
+        settingsError =
+          `${settingsPath} nie deklaruje env.ANTHROPIC_BASE_URL - jeśli logujesz się przez ` +
+          'subskrypcję indywidualną albo Team/Enterprise OAuth bez proxy firmowego, to może być ' +
+          'w porządku; jeśli oczekujesz routingu przez firmowe LiteLLM, sprawdź konfigurację.';
+      }
+    } catch (err) {
+      settingsError =
+        `Nie udało się odczytać ${settingsPath}: ${err instanceof Error ? err.message : String(err)}. ` +
+        'Bez tego pliku sesja autora nadal może zadziałać (np. czysta subskrypcja bez proxy), ' +
+        'ale nie da się tego potwierdzić bez uruchomienia sesji.';
+    }
+  }
+
+  const error = binaryError ?? settingsError;
+  const ok = error === undefined;
+  const latencyMs = Date.now() - started;
+  const note = ok
+    ? 'Binarka Claude Code odpowiada i ~/.claude/settings.json deklaruje routing przez proxy. Właściwy ping+tool-call jest sprawdzany przez sesję autora.'
+    : `${error} ${output.join('').trim().slice(0, 300)}`.trim();
+  return {
+    endpoint: 'claude-native',
+    model: config.model.author,
+    ping: { ok, latencyMs, ...(error !== undefined ? { error: note } : {}) },
+    toolUse: {
+      ok,
+      latencyMs,
+      ...(error !== undefined
+        ? { error: note }
+        : { error: 'Weryfikacja ping+tool_use następuje przy uruchomieniu sesji autora.' }),
     },
     ok,
   };

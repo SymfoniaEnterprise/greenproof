@@ -11,28 +11,28 @@ trybami. Każdy ma DOKŁADNIE jedną komendę `--init-only` do wygenerowania
 configu i jedną komendę `run`/`preflight`. `<repo>` = katalog repo testów
 (`--tests-repo`), `<config>` = ścieżka do wygenerowanego `greenproof.config.mjs`.
 
-### A. Claude przez OAuth, przez firmową bramę LiteLLM — NIEUKOŃCZONE, NIE UŻYWAJ jeszcze
+### A. `claude-native` — Claude Code natywnie (subskrypcja albo firmowa brama LiteLLM przez ~/.claude/settings.json)
 
-> **Status: oba dotychczas znalezione blokery naprawione, end-to-end
-> jeszcze niepotwierdzone.** Dwa niezależne problemy znalezione po drodze:
-> (1) token proxy odrzucany (`401 Invalid proxy server token passed...`) -
-> okazało się problemem po stronie operatora/organizacji (wydawanie
-> efemerycznych kluczy dla izolowanego podprocesu pod kontem Team/BYOK),
-> naprawione zmianą ustawień operatora, potwierdzone ręcznym testem; (2)
-> sesja autora (`runClaudeAuthorSession`) wołała SDK z `settingSources: []`
-> (pełna izolacja od `~/.claude/settings.json`), więc nie dziedziczyła
+> **Status: preflight ma dedykowaną ścieżkę walidacji, end-to-end jeszcze
+> niepotwierdzone.** Dwa niezależne problemy znalezione po drodze, oba
+> naprawione w kodzie: (1) token proxy odrzucany (`401 Invalid proxy server
+> token passed...`) - okazało się problemem po stronie operatora/organizacji
+> (wydawanie efemerycznych kluczy dla izolowanego podprocesu pod kontem
+> Team/BYOK), naprawione zmianą ustawień operatora, potwierdzone ręcznym
+> testem; (2) sesja autora (`runClaudeAuthorSession`) i sesja eskalacji
+> fixture (`runClaudeFixtureSession`) wołały SDK z `settingSources: []`
+> (pełna izolacja od `~/.claude/settings.json`), więc nie dziedziczyły
 > `ANTHROPIC_BASE_URL`/nagłówków firmowej bramy - model `*-byok` był
 > nierozpoznany. Naprawione w kodzie: dla trybu bez `authToken`/`baseUrl`
-> teraz `settingSources: ['user']` (świadomy koszt: sesja dziedziczy też
-> hooki/inne ustawienia operatora, nie tylko routing modelu). Do zrobienia
-> przed udokumentowaniem jako gotowego trybu: (1) ustalić z zespołem
-> platformowym zgodność z regulaminem licencji (Team/Enterprise czy
-> subskrypcja indywidualna), (2) potwierdzić pełny, zielony `grp run` na
-> żywym przypadku E2E. Szczegóły: `docs/model-bridges.md`, sekcja "Wariant
-> subskrypcyjny: sesja dziedziczy logowanie Claude z HOME" - w tym
-> `--skip-preflight`, potrzebny bo generyczny preflight nie ma ścieżki
-> walidacji dla tego trybu. Dopisz tu pełną, zaufaną receptę dopiero po
-> potwierdzeniu obu punktów.
+> obie sesje mają teraz `settingSources: ['user']` (świadomy koszt: sesja
+> dziedziczy też hooki/inne ustawienia operatora, nie tylko routing modelu).
+> `grp preflight` rozpoznaje ten tryb (brak tokenu I brak `baseUrl`) i sprawdza
+> binarkę Claude Code + obecność `ANTHROPIC_BASE_URL` w `~/.claude/settings.json`,
+> zamiast fałszywie czerwonego pingu na `api.anthropic.com`. Do zrobienia przed
+> pełnym zaufaniem temu trybowi: (1) ustalić z zespołem platformowym zgodność z
+> regulaminem licencji (Team/Enterprise czy subskrypcja indywidualna), (2)
+> potwierdzić pełny, zielony `grp run` na żywym przypadku E2E. Szczegóły:
+> `docs/model-bridges.md`, sekcja "Preset `claude-native`".
 
 ### B. LiteLLM bezpośrednio, po staremu (statyczny klucz w `.env`)
 
@@ -70,19 +70,22 @@ grp preflight --config <config>            # sprawdza tylko dostępność CLI
 grp run --config <config> --in plan.json --app-url <url> --out run-result.json
 ```
 
-**Który tryb wybrać dziś:** C jako domyślny (już zweryfikowany, dostarczył
-zielone case'y, zero pytań o regulamin subskrypcji Claude - to inny produkt
-z własnym ToS). B, gdy masz klucz `sk-...` i chcesz budżetów/telemetrii bramy.
-A **nie jest jeszcze gotowe** - patrz status wyżej.
+**Który tryb wybrać dziś:** `claude-native` (A) jako domyślny dla operatorów
+zalogowanych do Claude Code przez firmowe proxy albo subskrypcję - preflight
+ma dedykowaną ścieżkę, koszt zerowy (subskrypcja/abonament). C (`copilot`)
+jako alternatywa bez pytań o regulamin subskrypcji Claude - to inny produkt z
+własnym ToS. B (`litellm`), gdy masz klucz `sk-...` i chcesz budżetów/
+telemetrii bramy dla dowolnego modelu.
 
-## 1. Trzy presety
+## 1. Presety
 
 | Preset | Kanał | `baseUrl` | Token (`authTokenEnv`) | Kiedy |
 |---|---|---|---|---|
-| `codex-sub` (alias wsteczny, domyślny `init`) | CLIProxyAPI przez mostek OAuth | `http://127.0.0.1:8317` | `CLIPROXY_TOKEN` | istniejące konfiguracje; nowe wybierz jawnie `litellm` albo `copilot` |
-| `litellm` | brama LiteLLM | `http://127.0.0.1:4000` | `LITELLM_KEY` | chcesz budżetów klucza wirtualnego, telemetrii i fallbacków; modele deepseek/lokalne |
+| `claude-native` | Claude Code natywnie, dziedziczy `~/.claude/settings.json` (patrz §0.A) | brak | `ANTHROPIC_AUTH_TOKEN` (NIE ustawiaj) | zalecany start dla operatorów z dostępem do Claude Code (subskrypcja albo firmowe proxy) |
 | `copilot` | oficjalne GitHub Copilot CLI (driver `copilot-cli`) | brak | brak (`copilot login`) | autor `gpt-5.6-luna`, eskalacja `gpt-5.6-terra`; koszt estymowany z usage CLI |
-| `claude-sub` | API Anthropic wprost (albo poświadczenia Claude z HOME - patrz §0.A) | brak | `ANTHROPIC_AUTH_TOKEN` | najmocniejszy autor; bez tokenu wymaga `--skip-preflight` i świadomej zgody na regulamin dostawcy |
+| `litellm` | brama LiteLLM | `http://127.0.0.1:4000` | `LITELLM_KEY` | zaawansowane: budżety klucza wirtualnego, telemetria i fallbacki; modele deepseek/lokalne |
+| `claude-sub` | API Anthropic wprost, jawny token (tryb bramy, reprodukowalny/CI) | brak | `ANTHROPIC_AUTH_TOKEN` (wymagany) | zaawansowane: CI/reprodukowalność - dla trybu bez tokenu użyj `claude-native` zamiast tego |
+| `codex-sub` (alias wsteczny, domyślny `init`) | CLIProxyAPI przez mostek OAuth | `http://127.0.0.1:8317` | `CLIPROXY_TOKEN` | istniejące konfiguracje; nowe wybierz jawnie `claude-native` albo `copilot` |
 
 Gotowe configi referencyjne: `configs/litellm.config.mjs`,
 `configs/copilot.config.mjs`, `configs/claude.config.mjs` (opis pól:
@@ -143,12 +146,12 @@ Ping + wymuszony tool-call. Exit 2 = endpoint niezdatny (najczęściej: mostek
 gubi `tool_use` albo 401/403 - brak tokenu / wygasła sesja OAuth). Nie odpalaj
 `author` na takim endpointcie - sesje żyją z narzędzi (Bash, playwright-mcp).
 
-**Wyjątek: `claude-sub` bez tokenu (§0.A).** Preflight generyczny zawsze
-zwróci czerwony - pinguje `/v1/messages` wprost i wymaga `x-api-key`, a sesja
-autora w tym trybie dziedziczy logowanie z HOME i nigdy nie przechodzi tą
-ścieżką. `--skip-preflight` na `grp run` to świadomy escape hatch dokładnie na
-ten jeden przypadek (patrz `docs/model-bridges.md`) - nie używaj go, żeby
-obejść realny błąd konfiguracji na innym presecie.
+**Wyjątek: `claude-native` (i `claude-sub` bez tokenu, §0.A).** Preflight
+rozpoznaje brak tokenu I brak `baseUrl` i sprawdza zamiast tego binarkę Claude
+Code + `~/.claude/settings.json` (`runClaudeNativePreflight`), bez pingowania
+`/v1/messages`. `--skip-preflight` na `grp run` zostaje jako ogólny escape
+hatch dla przypadków spoza tego wzorca (patrz `docs/model-bridges.md`) - nie
+używaj go, żeby obejść realny błąd konfiguracji na innym presecie.
 
 ## 4. Eskalacja fixture (`model.fixtureAuthor`)
 

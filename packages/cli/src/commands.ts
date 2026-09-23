@@ -223,6 +223,22 @@ const INIT_PRESETS: Record<string, InitPreset> = {
     fixtureSessionMaxCostUsd: 2.5,
     secretsNote: 'Ustaw ANTHROPIC_AUTH_TOKEN w środowisku procesu.',
   },
+  'claude-native': {
+    label:
+      'Claude Code natywnie (dziedziczy logowanie z ~/.claude/settings.json - subskrypcja lub firmowe proxy LiteLLM): claude-sonnet-5-byok + eskalacja claude-opus-5-5-byok',
+    tokenEnv: 'ANTHROPIC_AUTH_TOKEN',
+    author: 'claude-sonnet-5-byok',
+    // Brak fixtureAuthorPreference celowo (jak claude-sub): ten tryb nie ma
+    // endpointu HTTP /v1/models do odpytania (resolveFixtureAuthor odcina się
+    // przed listModels, gdy preference.length === 0) - eskalacja idzie wprost
+    // z presetu, źródło 'preset'.
+    fixtureAuthor: { model: 'claude-opus-5-5-byok' },
+    costModel: 'subscription',
+    priceTable: {},
+    fixtureSessionMaxCostUsd: 2.5,
+    secretsNote:
+      'NIE ustawiaj ANTHROPIC_AUTH_TOKEN - ten tryb dziedziczy logowanie Claude Code z ~/.claude/settings.json operatora (subskrypcja indywidualna, Team/Enterprise OAuth, albo firmowe proxy LiteLLM przez ANTHROPIC_BASE_URL). Ustawienie tokenu przełączyłoby sesję w tryb bramy izolowanej od tego pliku.',
+  },
 };
 
 /** Bazowa nazwa modelu (sufiks effortu w nawiasie odpada). */
@@ -481,6 +497,19 @@ function configSource(input: ConfigSourceInput): string {
           `    copilot: { maxAutopilotContinues: 5 },`,
         ].join('\n') + '\n'
       : '';
+  // Ta sesja nie ma tokenu API ani baseUrl - dziedziczy logowanie Claude Code
+  // operatora z ~/.claude/settings.json (subskrypcja albo proxy firmowy).
+  // Ustawienie authTokenEnv w środowisku przełączy sesję z powrotem w tryb
+  // bramy izolowanej (settingSources: []) - patrz docs/model-bridges.md.
+  const nativeClaudeLines =
+    input.presetName === 'claude-native'
+      ? [
+          `    // Ta sesja autora NIE korzysta z tokenu API - dziedziczy logowanie Claude Code`,
+          `    // z ~/.claude/settings.json operatora (subskrypcja albo proxy firmowy przez`,
+          `    // ANTHROPIC_BASE_URL). Ustawienie ${j(input.tokenEnv)} w środowisku przełączy`,
+          `    // sesję w tryb bramy izolowanej od tego pliku (patrz docs/model-bridges.md).`,
+        ].join('\n') + '\n'
+      : '';
 
   return `// Wygenerowano przez: greenproof init --preset ${input.presetName}
 // Profil: ${input.label}
@@ -508,7 +537,7 @@ export default {
   model: {
 ${driverLine}${baseUrlLine}    authTokenEnv: ${j(input.tokenEnv)},
     author: ${j(input.author)},
-${costModelLine}${copilotLines}${fixtureLines}${priceComment}    priceTable: {
+${costModelLine}${copilotLines}${nativeClaudeLines}${fixtureLines}${priceComment}    priceTable: {
 ${priceLines}
     },
   },
