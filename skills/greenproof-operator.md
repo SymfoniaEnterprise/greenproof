@@ -293,9 +293,15 @@ grp clean --config <c> --in clean-in.json
 
 ## 7. Monitoring długich runów
 
-Run na 10 case'ach potrafi trwać 2-3 h (model lokalny: 4-10 h). **Startuje go
-człowiek w swoim terminalu** - agent podaje komendę i nie odpala jej sam ani
-w tle, ani przez systemd (uzasadnienie: `skills/greenproof-cli.md`, §0a).
+Run na 10 case'ach potrafi trwać 2-3 h (model lokalny: 4-10 h). Ścieżka 7.1
+(człowiek w swoim terminalu) jest **domyślna** i działa w KAŻDYM środowisku,
+niezależnie od tego, jakimi narzędziami dysponuje agent. Ścieżka 7.2 (agent
+w sesji z zadaniami w tle) to warunkowy wyjątek, opisany w całości w
+`skills/greenproof-cli.md`, §0a - bez zgody użytkownika w tej samej turze i
+bez WSZYSTKICH trzech możliwości technicznych stamtąd agent zawsze wraca do
+7.1: podaje komendę i oddaje start człowiekowi.
+
+### 7.1 Człowiek w terminalu (domyślnie)
 
 Komenda do wklejenia przez użytkownika - zwykły pierwszy plan, żeby widział
 tablicę postępu:
@@ -324,9 +330,55 @@ grp status --config <c> --run <runId>    # rollup w dowolnym momencie
 - `GREENPROOF_PROGRESS=plain` w tle (tablica TTY jest nieczytelna w logach);
   `json` gdy chcesz parsować zdarzenia (NDJSON na stderr).
 - Stdout zostaje czystym JSON-em - przekierowuj go osobno od logów.
-- Workdir jest trwały (bez auto-rm) - po padzie procesu stan w StateStore
-  przetrwa, wygasły lease zostanie przejęty, a `author` podejmie porzucone
-  case'y. Nie startuj drugiego runu „na wszelki wypadek".
+
+### 7.2 Agent w sesji z zadaniami w tle (wyjątek pod warunkami)
+
+Agent odpala `grp run` sam TYLKO gdy jego sesja ma wszystkie trzy możliwości
+techniczne z §0a - sposób uruchomienia procesu w tle śledzony identyfikatorem
+TEJ sesji, sposób odpytywania stanu bez wpatrywania się w surowy stdout,
+sposób przerwania WYŁĄCZNIE własnego zadania - i TYLKO po jawnej prośbie
+użytkownika w tej samej turze, nigdy samoczynnie ani domyślnie. Kształt jest
+funkcjonalnie ten sam co w 7.1 (odpalenie w tle + `GREENPROOF_PROGRESS=plain`/
+`json` + polling `grp status`), zmienia się tylko mechanizm:
+
+1. Odpal `grp run` przez mechanizm zadaniowy tej sesji (nigdy goły
+   `nohup`/`&` bez uchwytu, po którym dałoby się go później odnaleźć),
+   z jawnie ustawionym `GREENPROOF_PROGRESS=plain` (albo `json`, gdy chcesz
+   parsować zdarzenia na bieżąco) - nigdy `tty`, bo nie ma go kto oglądać.
+2. Monitoruj WYŁĄCZNIE przez regularny polling stanu z plików, w odstępach,
+   nie w pętli bez przerwy:
+
+   ```sh
+   grp status --config <c> --run <runId>
+   ```
+
+   Nie ma potrzeby czytać stdout/stderr procesu na żywo - stan i tak leży
+   w plikach (`state/<runId>.json`, ledgery case'ów), a polling to potwierdza
+   bez zalewania kontekstu surowym logiem.
+3. Przerywaj WYŁĄCZNIE przez mechanizm własnego zadania tej sesji - nigdy
+   przez zgadywanie PID z listy procesów, niezależnie od tego, jak pewny
+   jesteś, że to właściwy proces. Jeśli ten mechanizm zniknął (sesja padła
+   albo została zrestartowana), zostaw run w spokoju i powiedz użytkownikowi,
+   że trzeba go znaleźć i zatrzymać ręcznie - dokładnie jak dziś przy runie
+   człowieka w zamkniętym terminalu bez `systemd-run`.
+4. Po starcie poinformuj użytkownika WPROST: run poszedł w tło tej sesji,
+   podaj `runId` i ścieżkę `--out`/logu, przypomnij że zamknięcie albo utrata
+   tej sesji może przerwać run - nie obiecuj przetrwania, którego nie
+   potrafisz zagwarantować z tego poziomu.
+
+### 7.3 Zanim odpalisz kolejny run
+
+Nie startuj drugiego runu „na wszelki wypadek" - ani w 7.1, ani w 7.2.
+greenproof NIE ma blokady między-runowej w kodzie: lease (`acquireLease`)
+chroni tylko JEDEN `runId` przy wznowieniu po awarii, nie dwa niezależne runy
+(warunek 3, §0a w `skills/greenproof-cli.md`). Sprawdź `grp status` dla
+ostatnich znanych `runId` i/albo zapytaj wprost, zanim odpalisz drugi -
+zwłaszcza w 7.2, gdzie nic nie stoi na przeszkodzie, żeby agent sam siebie
+zdublował.
+
+Workdir jest trwały (bez auto-rm) - po padzie procesu stan w StateStore
+przetrwa, wygasły lease zostanie przejęty, a `author` podejmie porzucone
+case'y.
 
 ## 8. Raportowanie człowiekowi
 

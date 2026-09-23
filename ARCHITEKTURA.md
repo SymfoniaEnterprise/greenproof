@@ -304,7 +304,7 @@ API wprost.
 | **Silnik sesji** | ten sam Agent SDK, in-process | ten sam Agent SDK, in-process | ten sam Agent SDK, in-process |
 | **Postęp** | tablica `tty` odświeżana w miejscu | linie `plain` albo `json` do własnego kolektora | `github`: grupy i Job Summary |
 | **Kanał do człowieka** | plik meldunku na dysku | zależny od adaptera | issue przebiegu |
-| **Kto uruchamia** | człowiek - nigdy agent w tle | harmonogram albo zdarzenie repo | `workflow_dispatch` / `issue_comment` |
+| **Kto uruchamia** | człowiek (albo agent w sesji z mechanizmem zadań w tle, pod warunkami z §0a) | harmonogram albo zdarzenie repo | `workflow_dispatch` / `issue_comment` |
 | **Sterowanie przepływem** | kod wyjścia w powłoce | kod wyjścia + JSON z `--out` | to samo + `continue-on-error`, `if: always()` |
 
 ### Co jest niezmienne we wszystkich trzech

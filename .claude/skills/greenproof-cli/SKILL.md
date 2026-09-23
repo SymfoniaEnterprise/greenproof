@@ -8,9 +8,11 @@ Skill uruchamiania przebiegów greenproof przez CLI: wybór wariantu konfiguracj
 `grp run` z flagami, sekrety przez `.env`, kody wyjścia, komendy po
 runie (`status`/`accept`/`release`/`clean`) i typowe błędy.
 
-Zasada nadrzędna: **run odpala CZŁOWIEK w interaktywnej sesji terminala, nigdy
-agent w tle** - agent składa komendę i oddaje ją użytkownikowi (uzasadnienie
-w §0a skilla).
+Zasada nadrzędna: **run odpala domyślnie CZŁOWIEK w interaktywnej sesji
+terminala** - agent w sesji z mechanizmem zadań w tle (start, podgląd stanu,
+przerwanie scoped do własnego zadania) może odpalić `grp run` sam, pod
+warunkami z §0a skilla; bez tego mechanizmu zostaje przy podaniu komendy do
+wklejenia.
 
 Przeczytaj i stosuj instrukcje z `skills/greenproof-cli.md` (ścieżka względem
 korzenia repo).

@@ -34,8 +34,10 @@ leżą w `skills/`:
   (`litellm`/`claude-sub`/`copilot`), zmiana modelu i providera, obowiązkowy
   `greenproof preflight`, eskalacja fixture, `priceTable`, capy, efforty, tokeny.
 
-Zasady nadrzędne: **run odpala człowiek w interaktywnym terminalu, nigdy agent
-w tle** (`skills/greenproof-cli.md` §0a); case'y z ważnym dowodem przyjmuje sam
+Zasady nadrzędne: **run odpala domyślnie człowiek w interaktywnym terminalu;
+agent w sesji z mechanizmem zadań w tle, podglądu stanu i przerywania scoped
+do własnego zadania może odpalić sam, pod warunkami z §0a**
+(`skills/greenproof-cli.md`); case'y z ważnym dowodem przyjmuje sam
 pipeline, a ręczny `accept` (dla nieprzyjętych), `release` i `clean --purge` to
 decyzje CZŁOWIEKA - proponuj komendę, nie uruchamiaj; nie pushuj do repo
 testów; nie commituj bez wyraźnej prośby, a `.env` ani tokenów nigdy;

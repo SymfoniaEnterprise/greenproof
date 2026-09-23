@@ -7,7 +7,7 @@ Scenariusz wywiadu onboardingowego dla asystenta AI. Twoim celem jest przeprowad
 1. **Zadawaj JEDNO pytanie naraz i czekaj na odpowiedź.** Nigdy nie wyrzucaj formularza z kilkoma pytaniami naraz.
 2. **Najpierw WYKRYJ, potem pytaj.** Jeśli informację da się sprawdzić poleceniem (czy binarka działa, czy endpoint odpowiada, czy katalog jest repozytorium git, jakie modele zwraca brama), wykonaj sprawdzenie i pokaż wynik, zamiast kazać użytkownikowi zgadywać.
 3. **NIGDY nie wypisuj wartości tokenów ani nie wklejaj ich do komend widocznych w transkrypcie.** Token trafia wyłącznie do pliku `.env`, o którym informujesz, że jest dodany do `.gitignore`.
-4. **NIGDY nie uruchamiaj `grp run` samodzielnie bez wyraźnej zgody użytkownika.** Skill kończy się przygotowaniem gotowej komendy i pytaniem, czy ją odpalić.
+4. **NIGDY nie uruchamiaj `grp run` samodzielnie bez wyraźnej zgody użytkownika w tej samej turze.** Domyślnie skill kończy się przygotowaniem gotowej komendy i pytaniem, czy ją odpalić. Wyjątek — sesja z mechanizmem zadań w tle spełniającym trzy warunki techniczne z `skills/greenproof-cli.md` §0a — nie zmienia tej bramki: taka sesja może SAMA odpalić run wyłącznie po jawnym wyborze tej ścieżki przez użytkownika (Krok 12), nigdy domyślnie ani z własnej inicjatywy.
 5. **Gdy warunek wstępny nie jest spełniony (aplikacja nie odpowiada, preflight zwraca exit 2), ZATRZYMAJ SIĘ i wytłumacz, co naprawić.** Nie idź dalej na oślep.
 
 ---
@@ -314,12 +314,47 @@ Wyjaśnij użytkownikowi:
 - Czas trwania zależy od liczby case'ów i wybranego modelu (zwykle od 1 do kilku minut per case).
 - **ZAPYTAJ**: „Czy chcesz uruchomić ten przebieg teraz?".
 
-#### Uruchomienie przebiegu - ZAWSZE w terminalu użytkownika
-Przebieg uruchamia **człowiek w swojej sesji terminala**, nigdy asystent w tle
-własnej sesji (uzasadnienie i pełna zasada: `skills/greenproof-cli.md`, §0a).
-Rola asystenta: sprawdzić warunki wstępne i **podać gotową komendę do wklejenia**.
-Po starcie asystent czyta stan z plików (`grp status --run <runId>`, `--out`),
-a nie ze stdout procesu.
+#### Uruchomienie przebiegu — kto odpala
+Domyślnie przebieg uruchamia **człowiek w swojej sesji terminala**: rola
+asystenta to sprawdzić warunki wstępne i **podać gotową komendę do
+wklejenia**. To ścieżka, która działa zawsze, niezależnie od tego, jakimi
+narzędziami dysponuje dana sesja (uzasadnienie i pełna zasada:
+`skills/greenproof-cli.md`, §0a).
+
+**Jeśli** sesja asystenta ma WSZYSTKIE trzy możliwości techniczne z §0a —
+(1) mechanizm uruchamiania procesu w tle śledzonego przez identyfikator TEJ
+sesji, (2) sposób odpytywania stanu bez czytania surowego stdout procesu,
+(3) sposób przerywania WYŁĄCZNIE własnego zadania (nigdy zgadywanie PID) —
+asystent MOŻE zapytać użytkownika, którą ścieżkę wybiera:
+
+- **(a) Ty w swoim terminalu** — dostajesz gotową komendę do wklejenia (opis
+  wyżej; po starcie asystent czyta stan z plików, `grp status --run <runId>`
+  / `--out`, a nie ze stdout procesu).
+- **(b) Ja odpalam w tle tej sesji** — i będę monitorować oraz raportować
+  postęp przez polling stanu, bez zaglądania w surowy stdout.
+
+**Jeśli** sesja NIE MA któregokolwiek z trzech mechanizmów wyżej, zostaje
+wyłącznie ścieżka (a) — bez pytania o wybór, bo nie ma czego wybierać.
+
+**Nawet gdy asystent MA mechanizm zadań w tle, nie wybiera ścieżki (b) sam
+z siebie ani domyślnie.** Pyta i czeka na jawną decyzję użytkownika w TEJ
+SAMEJ turze (warunek 1 z §0a) — ta sama bramka zgody, co przy każdej innej
+ryzykownej/trudno odwracalnej akcji; reszta warunków wstępnych z §0a
+(preflight zielony, brak innego znanego aktywnego runu na tym `envUrl`,
+pytanie o wolny slot GPU dla presetów lokalnych/`costModel: 'local'`)
+obowiązuje tak samo przy obu ścieżkach — to warunki samego runu, nie warunki
+miejsca jego odpalenia.
+
+Jeśli użytkownik wybierze ścieżkę (b), asystent PRZED odpaleniem przypomina
+sobie skrót warunków z §0a i się ich trzyma:
+- `GREENPROOF_PROGRESS=plain` (albo `json`) — nigdy `tty`.
+- Monitorowanie WYŁĄCZNIE przez polling `grp status --config <c> --run <runId>`
+  w regularnych odstępach — nigdy przez czytanie stdout procesu w locie.
+- Przerywanie WYŁĄCZNIE przez mechanizm własnego zadania — nigdy zgadywanie
+  PID z listy procesów.
+- Zaraz po starcie: poinformować użytkownika WPROST, że run poszedł w tło tej
+  sesji, podać `runId` oraz ścieżkę logu/`--out`, i przypomnieć, że
+  zamknięcie/utrata tej sesji może przerwać run.
 
 
 ### Krok 13: Co dalej po zakończeniu runu

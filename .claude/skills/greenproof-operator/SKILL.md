@@ -11,8 +11,9 @@ sprzątanie po release i monitoring długich runów.
 Zasada nadrzędna: case'y z ważnym dowodem i czystym lintem przyjmuje SAM
 pipeline (auto-accept). Ręczny `accept` (dla tych, których pipeline nie wziął),
 `release` i `clean --purge` to decyzje CZŁOWIEKA - agent proponuje gotową
-komendę, nie uruchamia jej sam; agent nigdy nie pushuje. Runu też nie odpala
-w tle - to robi człowiek w swoim terminalu.
+komendę, nie uruchamia jej sam; agent nigdy nie pushuje. Run odpala domyślnie
+człowiek w swoim terminalu; agent w sesji z mechanizmem zadań w tle może sam,
+pod warunkami z `skills/greenproof-cli.md` §0a.
 
 Przeczytaj i stosuj instrukcje z `skills/greenproof-operator.md` (ścieżka
 względem korzenia repo).
