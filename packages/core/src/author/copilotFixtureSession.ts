@@ -87,7 +87,7 @@ export async function runCopilotFixtureSession(
     ...COPILOT_FIXTURE_SHELL_DENY_ARGS,
     '--excluded-tools=task,web_fetch',
     '--disable-builtin-mcps',
-    '--no-ask-user', '--no-auto-update', '--no-color', '--no-remote', '--no-remote-export',
+    '--no-ask-user', '--no-auto-update', '--no-color',
     '--allow-all-mcp-server-instructions',
     '--output-format=json', '--stream=on', '--silent',
     `--additional-mcp-config=@${mcpConfigPath}`,
