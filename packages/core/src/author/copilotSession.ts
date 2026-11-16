@@ -149,8 +149,6 @@ function copilotArgs(
     '--no-ask-user',
     '--no-auto-update',
     '--no-color',
-    '--no-remote',
-    '--no-remote-export',
     '--allow-all-mcp-server-instructions',
     '--output-format=json',
     '--stream=on',
