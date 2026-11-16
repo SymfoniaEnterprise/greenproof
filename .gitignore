@@ -14,3 +14,6 @@ examples/run-archives/
 # Schematy architektury: wersja .md (mermaid) jest wersjonowana i linkowana
 # z README; ignorujemy tylko wygenerowaną wersję graficzną .html.
 docs/schematy/*.html
+
+# Visual Studio
+.vs/
