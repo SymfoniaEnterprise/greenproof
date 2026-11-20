@@ -243,7 +243,10 @@ const INIT_PRESETS: Record<string, InitPreset> = {
 
 /** Bazowa nazwa modelu (sufiks effortu w nawiasie odpada). */
 function priceTableKey(model: string): string {
-  return model.replace(/\([^)]*\)$/, '');
+  if (!model.endsWith(')')) return model;
+  const body = model.slice(0, -1);
+  const open = body.indexOf('(', body.lastIndexOf(')') + 1);
+  return open === -1 ? model : model.slice(0, open);
 }
 
 /** Bazowa nazwa modelu (bez sufiksu effortu). */

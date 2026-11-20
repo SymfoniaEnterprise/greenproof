@@ -108,10 +108,10 @@ function collectTables(lines: string[]): RawTable[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? '';
-    const heading = /^(#{1,6})\s+(.*)$/.exec(line.trim());
+    const heading = /^(#{1,6})(\s.*)$/.exec(line.trim());
     if (heading) {
       const level = (heading[1] ?? '').length;
-      const text = heading[2] ?? '';
+      const text = (heading[2] ?? '').trim();
       if (skippedAtLevel > 0 && level <= skippedAtLevel) skippedAtLevel = 0;
       if (IGNORED_SECTION_RE.test(text)) skippedAtLevel = level;
       continue;
@@ -241,7 +241,7 @@ function slugify(value: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/^-|-$/g, '')
     .toLowerCase();
 }
 
